@@ -1,0 +1,55 @@
+# Build and test on pull requests and on manual request.
+#
+# Windows and macOS runners exercise platform-only code before a release.
+# Linux keeps the platform-independent build and fast tests covered.
+#
+# There is no tag trigger. A release is started by hand and creates its tag
+# afterwards, so a tag push would only repeat the fast suite on a commit that
+# the release workflow already tested on all three platforms. See
+# docs/adr/0010-manual-version-driven-releases.md.
+name: CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v7
+
+      # setup-dotnet reads global.json on its own, so the SDK version lives in
+      # one file for the runner, for the developer and for any contributor.
+      - uses: actions/setup-dotnet@v6
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', 'Directory.Build.props') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restore
+        run: dotnet restore WinMtr.Remaster.sln
+
+      - name: Build
+        run: dotnet build WinMtr.Remaster.sln -c Release --no-restore
+
+      # Directory.Build.props already excludes Category=Integration. Those
+      # tests send real ICMP to public addresses, which a runner blocks, so
+      # they would fail on connectivity and not on a defect.
+      - name: Test
+        run: dotnet test WinMtr.Remaster.sln -c Release --no-build

@@ -1,0 +1,19 @@
+|---------------------------------------------------------------------------------------------------------------------------------|
+|                                                        WinMTR statistics                                                        |
+|Target: github.com [140.82.121.4]                                                                                                |
+|Started: 1970-01-01 00:00:00 local   Duration: 00:00:00                                                                          |
+| Hop | Address        |                       Host              -     % | Sent | Recv | Best | Avrg | Wrst | Last | Status       |
+|-----|----------------|-------------------------------------------------|------|------|------|------|------|------| ------------ |
+|   1 |    192.168.1.1 |                             192.168.1.1 -   0.0 |  214 |  214 |    1 |    2 |   19 |    1 |              |
+|   2 |     100.64.0.1 |                              100.64.0.1 -   0.0 |  214 |  214 |    4 |    6 |   41 |    5 |              |
+|   3 | 198.51.100.231 |                    ae1.core.example.net -   0.0 |  214 |  214 |    7 |    9 |   63 |    8 |              |
+|   4 |                |                                         - 100.0 |  214 |    0 |   -- |   -- |   -- |   -- | No response. |
+|   5 |   203.0.113.38 |     ae-3.r20.frnkft13.de.bb.example.net -   2.3 |  214 |  209 |   31 |   34 |  118 |   32 |              |
+|   6 |   140.82.121.4 |                              github.com -   0.5 |  214 |  213 |   33 |   35 |   96 |   34 |              |
+|_____|________________|_________________________________________________|______|______|______|______|______|______| ____________ |
+
+   Each hop sends the next probe only after the last probe gives an answer or
+   times out. The interval is thus a minimum. A lost answer delays that hop, so
+   the Sent counts of two hops can be different. Sent counts only the probes
+   that completed.
+   WinMTR Remaster v0.1.0 GPL V2 by Konstantinos Zagoris

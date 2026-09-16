@@ -1,0 +1,71 @@
+# Route agent-ready issues to an agent provider.
+#
+# This is a safe stub. It posts an execution checklist and applies a
+# complexity label. It calls no external agent API and needs no secrets.
+#
+# To wire a real provider (Claude Code, OpenAI Codex, Copilot), extend the
+# `route` job behind an environment check for your secret, for example
+# `CLAUDE_CODE_OAUTH_TOKEN` or `OPENAI_API_KEY`. Keep this stub behavior as
+# the fallback when the secret is absent, so forks stay green.
+#
+# Labels used: agent-ready, agent-candidate, agent-generated, needs-planning,
+# complexity:low, complexity:medium, complexity:high, needs-info.
+# Create them once in Settings > Issues > Labels. Future work can add a
+# setup-labels workflow.
+
+name: Agent-ready trigger
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  issues: write
+
+jobs:
+  route:
+    if: github.event.label.name == 'agent-ready'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Post execution checklist
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const body = (context.payload.issue.body || '').toLowerCase();
+            const complexity =
+              body.includes('complexity:high') ? 'complexity:high' :
+              body.includes('complexity:medium') ? 'complexity:medium' :
+              'complexity:low';
+            const labels = context.payload.issue.labels.map(l => l.name);
+            if (!labels.includes(complexity)) {
+              await github.rest.issues.addLabels({
+                ...context.repo,
+                issue_number: context.issue.number,
+                labels: [complexity],
+              });
+            }
+            if (complexity === 'complexity:high' && !labels.includes('needs-planning')) {
+              await github.rest.issues.addLabels({
+                ...context.repo,
+                issue_number: context.issue.number,
+                labels: ['needs-planning'],
+              });
+            }
+            const planGate = complexity === 'complexity:high'
+              ? '\n**Complexity is high.** Write the plan to `docs/plans/<issue>-plan.md` and wait for a maintainer to comment `/approve-plan` before you change code.'
+              : '\n**Complexity is low or medium.** Implement directly against the acceptance criteria.';
+            await github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: context.issue.number,
+              body: [
+                'Agent route: this issue is marked `agent-ready`.',
+                '',
+                '1. Read `AGENTS.md`, `CONTEXT.md`, and the linked ADRs first.',
+                '2. Use `.github/pull_request_template.md` as the PR body.',
+                '3. Fill the REQUIRED Authorship and follow-up gate. Ask for the owner.',
+                '4. Run: build, fast tests, format check, `git diff --check`.',
+                planGate,
+                '',
+                '<!-- TODO: invoke your agent provider here when its secret exists. -->',
+              ].join('\n'),
+            });

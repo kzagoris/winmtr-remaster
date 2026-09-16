@@ -1,0 +1,389 @@
+# Produce the downloadable archives and publish them as a GitHub Release.
+#
+# A release starts by hand from the Actions tab. You give the version, and the
+# workflow checks it against Directory.Build.props before it spends a build
+# minute. A tag no longer starts a release: the workflow creates the tag
+# v<version> at the released commit as its last act. See
+# docs/adr/0010-manual-version-driven-releases.md.
+#
+# Native AOT cannot cross-compile between operating systems, so each operating
+# system needs its own job. It CAN cross-compile between architectures on the
+# same operating system, because the Apple clang toolchain holds both Mac
+# architectures. One macOS job therefore builds osx-arm64 and osx-x64. This
+# halves the macOS minutes and it survives August 2027, when the last Intel
+# macOS image disappears.
+#
+# See docs/adr/0007-native-aot-release-matrix.md.
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version, three numeric parts, for example 0.1.0'
+        required: true
+        type: string
+      dry_run:
+        description: 'Build and upload artifacts only. Publish nothing.'
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+# A fixed group, because every release runs from main. Two releases must never
+# run together.
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    name: Check the release request
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+      title: ${{ steps.resolve.outputs.title }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check the branch, the version and the history
+        id: resolve
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+
+          if [ "${GITHUB_REF_NAME}" != "main" ]; then
+            echo "A release runs from main only. This run is on ${GITHUB_REF_NAME}." >&2
+            exit 1
+          fi
+
+          # scripts/assemble-macos-app.sh needs three numeric parts for the
+          # Apple bundle version fields. Refuse a two-part version here, not
+          # forty minutes later on the macOS runner.
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "Version '${VERSION}' needs three numeric parts, for example 0.1.0." >&2
+            exit 1
+          fi
+
+          # Directory.Build.props is the source of truth. The typed version only
+          # confirms intent, so a release can never carry a number that differs
+          # from the one the binaries were stamped with.
+          declared=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' Directory.Build.props | head -n 1)
+          if [ "$declared" != "$VERSION" ]; then
+            echo "Directory.Build.props declares '${declared}' and this run asks for '${VERSION}'." >&2
+            echo "Commit the version you want to release before you start the run." >&2
+            exit 1
+          fi
+
+          if [ "$DRY_RUN" != "true" ]; then
+            if git ls-remote --exit-code --tags origin "refs/tags/v${VERSION}" >/dev/null 2>&1; then
+              echo "Tag v${VERSION} exists. Raise the version to release again." >&2
+              exit 1
+            fi
+            if gh release view "v${VERSION}" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              echo "A Release named v${VERSION} exists. Raise the version to release again." >&2
+              exit 1
+            fi
+          fi
+
+          # A zero patch part is dropped from the human-facing title only, so
+          # 0.1.0 reads as 'WinMTR 0.1' while 0.1.1 keeps all three parts. The
+          # tag and the binaries always keep three parts.
+          title="$VERSION"
+          if [[ "$VERSION" =~ ^([0-9]+\.[0-9]+)\.0$ ]]; then
+            title="${BASH_REMATCH[1]}"
+          fi
+
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "title=WinMTR ${title}" >> "$GITHUB_OUTPUT"
+          echo "Release ${VERSION} as 'WinMTR ${title}' (dry run: ${DRY_RUN})"
+
+  build:
+    name: ${{ matrix.name }}
+    needs: preflight
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      # One broken platform must not cancel the other builds: one run has to
+      # tell the whole story. The release job below still waits for every
+      # build, so a Release with a hole is never published.
+      fail-fast: false
+      matrix:
+        include:
+          - name: win-x64
+            runner: windows-latest
+            rids: win-x64
+            smoke_rids: win-x64
+          - name: linux-x64
+            runner: ubuntu-24.04
+            rids: linux-x64
+            smoke_rids: linux-x64
+          - name: linux-arm64
+            runner: ubuntu-24.04-arm
+            rids: linux-arm64
+            smoke_rids: linux-arm64
+          - name: macos
+            runner: macos-latest
+            rids: osx-arm64 osx-x64
+            # The runner is Apple Silicon, so it cannot start the Intel build.
+            # osx-x64 therefore ships with no execution evidence, which
+            # docs/adr/0010 records and the README states.
+            smoke_rids: osx-arm64
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ matrix.name }}-${{ hashFiles('**/*.csproj', 'Directory.Build.props') }}
+          restore-keys: nuget-${{ matrix.name }}-
+
+      # Native AOT on Linux links with clang against zlib.
+      - name: Install the native toolchain
+        if: startsWith(matrix.runner, 'ubuntu')
+        run: sudo apt-get update && sudo apt-get install -y clang zlib1g-dev
+
+      # preflight already proved the version. A dry run stamps a -dev version
+      # so a workflow artifact can never be mistaken for a release build.
+      - name: Resolve the version
+        id: version
+        shell: bash
+        env:
+          BASE: ${{ needs.preflight.outputs.version }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          if [ "$DRY_RUN" = "true" ]; then
+            version="${BASE}-dev.${GITHUB_SHA:0:7}"
+          else
+            version="${BASE}"
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "Building version ${version}"
+
+      # Each job tests on the platform it publishes for. That is the only way
+      # the Windows-only and Linux-only branches get tested where they matter.
+      # The Avalonia tests use Avalonia.Headless, so no display is needed.
+      - name: Test
+        run: dotnet test WinMtr.Remaster.sln -c Release
+
+      # One command shape for all five runtime identifiers. The IL2104/IL3053
+      # demotion lives in WinMtr.Desktop.csproj under '$(PublishAot)', so the
+      # win-x64-aot publish profile is not needed here; it stays as a local
+      # developer convenience.
+      - name: Publish and package
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          RIDS: ${{ matrix.rids }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          for rid in $RIDS; do
+            for spec in "src/WinMtr.Console:winmtr-cli:winmtr-cli" \
+                        "src/WinMtr.Desktop:winmtr:winmtr"; do
+              project="${spec%%:*}"
+              rest="${spec#*:}"
+              binary="${rest%%:*}"
+              product="${rest#*:}"
+
+              out="publish/${product}-${rid}"
+              dotnet publish "$project" \
+                -c Release \
+                -r "$rid" \
+                --self-contained \
+                -p:PublishAot=true \
+                -p:Version="$VERSION" \
+                -o "$out"
+
+              # Symbols are dropped: they are often larger than the binary and
+              # there is no crash-report pipeline to consume them. Any stack
+              # trace can be re-symbolised from a rebuild of the same tag.
+              stage="stage/${product}-${VERSION}-${rid}"
+              mkdir -p "$stage"
+              payload="$stage"
+              if [ "$product" = "winmtr" ]; then
+                case "$rid" in
+                  osx-arm64|osx-x64)
+                    payload="$stage/WinMTR.app/Contents/MacOS"
+                    mkdir -p "$payload" ;;
+                esac
+              fi
+              if [ "$product" = "winmtr" ]; then
+                # Avalonia loads native libraries beside the apphost. Keep the
+                # complete publish tree, including modes and nested resources.
+                cp -a "$out/." "$payload/"
+                find "$payload" \( -name '*.pdb' -o -name '*.dbg' -o -name '*.dSYM' \) \
+                  -prune -exec rm -rf {} +
+              else
+                case "$rid" in
+                  win-*) cp "$out/${binary}.exe" "$stage/" ;;
+                  *)     cp "$out/${binary}" "$stage/" ;;
+                esac
+              fi
+              cp LICENSE README.md "$stage/"
+
+              # Assert the staged tree, not the publish directory: a successful
+              # publish alone does not prove that the archive can load its natives.
+              if [ "$product" = "winmtr" ]; then
+                case "$rid" in
+                  win-x64)
+                    natives="av_libglesv2.dll libSkiaSharp.dll libHarfBuzzSharp.dll" ;;
+                  linux-x64|linux-arm64)
+                    natives="libSkiaSharp.so libHarfBuzzSharp.so" ;;
+                  osx-arm64|osx-x64)
+                    natives="libAvaloniaNative.dylib libSkiaSharp.dylib libHarfBuzzSharp.dylib" ;;
+                  *)
+                    echo "No desktop native-library checks defined for $rid" >&2
+                    exit 1 ;;
+                esac
+                for native in $natives; do
+                  if [ ! -s "$payload/$native" ]; then
+                    echo "Missing or empty desktop native library for $rid: $payload/$native" >&2
+                    exit 1
+                  fi
+                done
+                case "$rid" in
+                  osx-arm64|osx-x64)
+                    bash scripts/assemble-macos-app.sh "$stage/WinMTR.app" "$VERSION" "$rid" ;;
+                esac
+              fi
+
+              archive="${product}-${VERSION}-${rid}"
+              if [ "${rid#win-}" != "$rid" ]; then
+                (cd stage && 7z a -tzip "../dist/${archive}.zip" "${archive}/") > /dev/null
+              else
+                tar -czf "dist/${archive}.tar.gz" -C stage "${archive}"
+              fi
+              # The macOS console must remain a plain, apphost-only archive.
+              if [ "$product" = "winmtr-cli" ]; then
+                case "$rid" in
+                  osx-arm64|osx-x64)
+                    diff -u \
+                      <(printf '%s\n' "$archive/" "$archive/LICENSE" "$archive/README.md" "$archive/winmtr-cli" | LC_ALL=C sort) \
+                      <(tar -tzf "dist/${archive}.tar.gz" | LC_ALL=C sort) ;;
+                esac
+              fi
+              echo "Packaged dist/${archive}"
+            done
+          done
+          ls -l dist
+
+      # Start what this runner can start. A Native AOT trimming break appears
+      # only at run time, so no packaging assertion above can find it. This
+      # replaces the hand smoke that ADR 0007 and ADR 0009 used to demand.
+      # It runs against the staged tree, because that is what the user gets.
+      - name: Install a virtual display
+        if: startsWith(matrix.runner, 'ubuntu')
+        run: sudo apt-get install -y xvfb
+
+      - name: Smoke the packaged binaries
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          SMOKE_RIDS: ${{ matrix.smoke_rids }}
+        run: |
+          set -euo pipefail
+
+          launch=""
+          if [ "${RUNNER_OS}" = "Linux" ]; then
+            launch="xvfb-run -a"
+          fi
+
+          for rid in $SMOKE_RIDS; do
+            suffix=""
+            case "$rid" in win-*) suffix=".exe" ;; esac
+
+            # The console prints its stamped version and exits zero. This
+            # proves the AOT binary starts, loads, and carries the version the
+            # run asked for. SourceLink may append '+<sha>', so compare the
+            # prefix.
+            cli="stage/winmtr-cli-${VERSION}-${rid}/winmtr-cli${suffix}"
+            printed=$("$cli" --version)
+            case "$printed" in
+              "$VERSION"|"$VERSION"+*) ;;
+              *)
+                echo "Console reported '${printed}', the run built '${VERSION}'." >&2
+                exit 1 ;;
+            esac
+            echo "Console smoke passed for ${rid}: ${printed}"
+
+            # The desktop application has no version flag, so start it and
+            # confirm it stays alive. Window construction loads Avalonia and
+            # DataGrid, which is exactly where a trimming break would show.
+            desktop="stage/winmtr-${VERSION}-${rid}/winmtr${suffix}"
+            case "$rid" in
+              osx-*) desktop="stage/winmtr-${VERSION}-${rid}/WinMTR.app/Contents/MacOS/winmtr" ;;
+            esac
+            $launch "$desktop" &
+            pid=$!
+            sleep 20
+            if ! kill -0 "$pid" 2>/dev/null; then
+              wait "$pid" || true
+              echo "The desktop application stopped during the smoke for ${rid}." >&2
+              exit 1
+            fi
+            kill "$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+            echo "Desktop smoke passed for ${rid}"
+          done
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: archives-${{ matrix.name }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    name: Publish the Release
+    needs: [preflight, build]
+    # A dry run stops at the workflow artifacts above.
+    if: ${{ inputs.dry_run == false }}
+    runs-on: ubuntu-24.04
+    steps:
+      # The release notes live in the repository, so this job needs the tree.
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          pattern: archives-*
+          merge-multiple: true
+
+      - name: Write SHA256SUMS
+        run: |
+          cd dist
+          sha256sum * > SHA256SUMS
+          cat SHA256SUMS
+
+      # gh creates the tag at --target. The tag is the record of what shipped,
+      # never the trigger.
+      - name: Create the Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.preflight.outputs.version }}
+          TITLE: ${{ needs.preflight.outputs.title }}
+        run: |
+          set -euo pipefail
+          notes="docs/release-notes/${VERSION}.md"
+          if [ -f "$notes" ]; then
+            notes_args=(--notes-file "$notes")
+            echo "Using ${notes}"
+          else
+            notes_args=(--generate-notes)
+            echo "No ${notes}; generating notes from the commit history"
+          fi
+          gh release create "v${VERSION}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --target "${GITHUB_SHA}" \
+            --title "${TITLE}" \
+            "${notes_args[@]}" \
+            dist/*

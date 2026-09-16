@@ -1,0 +1,44 @@
+name: Feature request
+description: Propose a change to tracing, reports, or the window.
+labels: [needs-triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        State the problem before the solution. Link `CONTEXT.md` terms where they apply
+        (route snapshot, trace session, responding hop, retained hop rows).
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Who hits it, and in which moment (live trace, export, settings)?
+      placeholder: During a call I cannot keep the failing hop in view while figures change.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: The change you want. Name the affected projects (Core, Infrastructure, Console, Avalonia).
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and boundaries
+      description: What it must not touch (report formats, public API, release matrix, golden files).
+  - type: dropdown
+    id: complexity
+    attributes:
+      label: Complexity guess
+      description: Guides agent routing. Low is one file with a clear pattern. High needs a plan first.
+      options:
+        - complexity:low
+        - complexity:medium
+        - complexity:high
+    validations:
+      required: false

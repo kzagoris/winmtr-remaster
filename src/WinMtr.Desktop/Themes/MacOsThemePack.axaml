@@ -1,0 +1,351 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="WinMtr.Desktop.Themes.MacOsThemePack">
+  <!-- Approved macOS shell treatment over Fluent, not replacement templates.
+       Keep the same keys in both palettes. Do not freeze the system accent.
+       Palette entries are copied to application resources; merging this
+       dictionary alone cannot override the application's theme dictionaries. -->
+  <Styles.Resources>
+    <ResourceDictionary>
+      <!-- The private Core Text family selects the system UI face on macOS.
+           Explicit fallbacks keep profile-injected headless hosts usable.
+           Do not use $Default alone: WithInterFont configures it as Inter. -->
+      <FontFamily x:Key="WinMtrShellFontFamily">.AppleSystemUIFont, SF Pro Text, Helvetica Neue, $Default</FontFamily>
+      <FontFamily x:Key="WinMtrAddressFontFamily">Menlo, monospace</FontFamily>
+      <x:Double x:Key="WinMtrMainWindowMinWidth">800</x:Double>
+      <x:Double x:Key="WinMtrSortGlyphFontSize">11</x:Double>
+      <x:Double x:Key="WinMtrTargetMaxWidth">160</x:Double>
+      <x:Double x:Key="WinMtrTargetMinWidth">160</x:Double>
+      <x:Double x:Key="WinMtrStartStopMinWidth">72</x:Double>
+      <Thickness x:Key="WinMtrToolbarLabelMargin">4</Thickness>
+      <Thickness x:Key="WinMtrToolbarActionMargin">2,4</Thickness>
+      <Thickness x:Key="WinMtrToolbarCopyMargin">6,4,2,4</Thickness>
+      <x:Boolean x:Key="WinMtrToolbarCanWrap">True</x:Boolean>
+      <x:Boolean x:Key="WinMtrHostMultilineVisible">False</x:Boolean>
+      <x:Boolean x:Key="WinMtrHostLabelVisible">True</x:Boolean>
+      <x:Boolean x:Key="WinMtrDetailWordsVisible">False</x:Boolean>
+      <x:Boolean x:Key="WinMtrDetailDisclosureVisible">True</x:Boolean>
+      <x:Int32 x:Key="WinMtrDetailToggleColumn">0</x:Int32>
+      <CornerRadius x:Key="WinMtrSurfaceCornerRadius">8</CornerRadius>
+      <CornerRadius x:Key="WinMtrTileCornerRadius">0</CornerRadius>
+      <CornerRadius x:Key="WinMtrBannerCornerRadius">6</CornerRadius>
+      <Thickness x:Key="WinMtrPopupPadding">14,10</Thickness>
+      <Thickness x:Key="WinMtrMenuPadding">6</Thickness>
+      <Thickness x:Key="WinMtrDetailPadding">14,12</Thickness>
+      <Thickness x:Key="WinMtrTilePadding">12,10</Thickness>
+      <Thickness x:Key="WinMtrBannerPadding">10,6</Thickness>
+      <Thickness x:Key="WinMtrStatusPadding">10,0</Thickness>
+      <Thickness x:Key="WinMtrHistoryItemPadding">0</Thickness>
+      <Thickness x:Key="WinMtrSettingsMargin">20</Thickness>
+      <Thickness x:Key="WinMtrSettingsButtonBarMargin">16,0,16,20</Thickness>
+      <x:Double x:Key="WinMtrSettingsSpacing">10</x:Double>
+      <CornerRadius x:Key="WinMtrControlCornerRadius">6</CornerRadius>
+      <x:Double x:Key="WinMtrControlMinHeight">28</x:Double>
+      <Thickness x:Key="WinMtrButtonPadding">12,4</Thickness>
+      <Thickness x:Key="WinMtrDialogButtonPadding">6,4</Thickness>
+      <Thickness x:Key="WinMtrInputPadding">8,4</Thickness>
+      <Thickness x:Key="WinMtrComboPadding">10,4,0,4</Thickness>
+      <!-- The floating-surface tokens: one set for the menu, combo, and history
+           popups. The palette entries live in the theme dictionaries; the metrics
+           and corners stay outside them. -->
+      <CornerRadius x:Key="WinMtrFloatingCornerRadius">6</CornerRadius>
+      <Thickness x:Key="WinMtrFloatingPadding">5</Thickness>
+      <CornerRadius x:Key="WinMtrHighlightCornerRadius">4</CornerRadius>
+      <StreamGeometry x:Key="WinMtrPopupButtonChevronGeometry">M 6,0 L 12,4 L 0,4 Z M 6,8 L 0,4 L 12,4 Z</StreamGeometry>
+      <!-- Compact density keys carry the approved macOS row metrics. -->
+      <Thickness x:Key="MenuFlyoutItemThemePaddingNarrow">10,3</Thickness>
+      <Thickness x:Key="ComboBoxItemThemePadding">10,3</Thickness>
+      <Thickness x:Key="ListBoxItemPadding">10,3</Thickness>
+      <Thickness x:Key="MenuFlyoutScrollerMargin">0</Thickness>
+      <Thickness x:Key="ComboBoxDropdownContentMargin">0</Thickness>
+      <Thickness x:Key="AutoCompleteListPadding">0</Thickness>
+      <!-- These Fluent keys also reach the target/numeric inner text editors
+            and split-button components. -->
+      <x:Double x:Key="TextControlThemeMinHeight">28</x:Double>
+      <Thickness x:Key="TextControlBorderThemeThicknessFocused">2</Thickness>
+      <x:Double x:Key="SplitButtonSecondaryButtonSize">26</x:Double>
+      <x:Double x:Key="ScrollBarSize">12</x:Double>
+      <Template x:Key="WinMtrFocusAdorner">
+        <Border BorderBrush="{DynamicResource SystemControlHighlightAccentBrush}"
+                BorderThickness="2" CornerRadius="8" Margin="-3"
+                IsHitTestVisible="False" />
+      </Template>
+      <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Light">
+          <SolidColorBrush x:Key="WinMtrWindowBackgroundBrush">#F5F5F7</SolidColorBrush>
+          <SolidColorBrush x:Key="WinMtrWindowFallbackBrush">#F5F5F7</SolidColorBrush>
+          <SolidColorBrush x:Key="WinMtrDetailBorderBrush">#D1D1D6</SolidColorBrush>
+          <SolidColorBrush x:Key="WinMtrDetailBackgroundBrush">#FAFAFC</SolidColorBrush>
+          <SolidColorBrush x:Key="WinMtrDetailTileBackgroundBrush">Transparent</SolidColorBrush>
+          <SolidColorBrush x:Key="WinMtrStatusBackgroundBrush">#F5F5F7</SolidColorBrush>
+          <SolidColorBrush x:Key="WinMtrRowStripeBrush">#F0F0F2</SolidColorBrush>
+          <SolidColorBrush x:Key="WinMtrRowPlainBrush">#FFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="WinMtrInactiveSelectionBrush">#DCDCE0</SolidColorBrush>
+          <SolidColorBrush x:Key="WinMtrInactiveSelectionTextBrush">#202020</SolidColorBrush>
+          <SolidColorBrush x:Key="WinMtrInactiveSelectionFrozenTextBrush" Color="#202020" Opacity="0.75" />
+          <SolidColorBrush x:Key="WinMtrControlBackgroundBrush">#FFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="WinMtrControlBorderBrush">#BDBDC2</SolidColorBrush>
+          <SolidColorBrush x:Key="WinMtrFloatingSurfaceBrush">#FFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="WinMtrFloatingBorderBrush">#D1D1D6</SolidColorBrush>
+          <SolidColorBrush x:Key="WinMtrScrollThumbBrush" Color="#000000" Opacity="0.38" />
+          <SolidColorBrush x:Key="WinMtrScrollThumbHoverBrush" Color="#000000" Opacity="0.55" />
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="Dark">
+          <SolidColorBrush x:Key="WinMtrWindowBackgroundBrush">#252527</SolidColorBrush>
+          <SolidColorBrush x:Key="WinMtrWindowFallbackBrush">#252527</SolidColorBrush>
+          <SolidColorBrush x:Key="WinMtrDetailBorderBrush">#48484A</SolidColorBrush>
+          <SolidColorBrush x:Key="WinMtrDetailBackgroundBrush">#2C2C2E</SolidColorBrush>
+          <SolidColorBrush x:Key="WinMtrDetailTileBackgroundBrush">Transparent</SolidColorBrush>
+          <SolidColorBrush x:Key="WinMtrStatusBackgroundBrush">#252527</SolidColorBrush>
+          <SolidColorBrush x:Key="WinMtrRowStripeBrush">#303032</SolidColorBrush>
+          <SolidColorBrush x:Key="WinMtrRowPlainBrush">#28282A</SolidColorBrush>
+          <SolidColorBrush x:Key="WinMtrInactiveSelectionBrush">#505054</SolidColorBrush>
+          <SolidColorBrush x:Key="WinMtrInactiveSelectionTextBrush">#FFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="WinMtrInactiveSelectionFrozenTextBrush" Color="#FFFFFF" Opacity="0.85" />
+          <SolidColorBrush x:Key="WinMtrControlBackgroundBrush">#3A3A3C</SolidColorBrush>
+          <SolidColorBrush x:Key="WinMtrControlBorderBrush">#636366</SolidColorBrush>
+          <SolidColorBrush x:Key="WinMtrFloatingSurfaceBrush">#2A2A2C</SolidColorBrush>
+          <SolidColorBrush x:Key="WinMtrFloatingBorderBrush">#48484A</SolidColorBrush>
+          <SolidColorBrush x:Key="WinMtrScrollThumbBrush" Color="#FFFFFF" Opacity="0.38" />
+          <SolidColorBrush x:Key="WinMtrScrollThumbHoverBrush" Color="#FFFFFF" Opacity="0.55" />
+        </ResourceDictionary>
+      </ResourceDictionary.ThemeDictionaries>
+    </ResourceDictionary>
+  </Styles.Resources>
+
+  <Style Selector="DataGrid#HopGrid">
+    <Setter Property="RowHeight" Value="24" />
+    <Setter Property="RowBackground" Value="{DynamicResource WinMtrRowPlainBrush}" />
+  </Style>
+  <Style Selector="DataGrid#HopGrid DataGridCell">
+    <Setter Property="MinHeight" Value="24" />
+    <Setter Property="FontSize" Value="13" />
+  </Style>
+  <Style Selector="TextBlock.host-label">
+    <Setter Property="Margin" Value="12,0" />
+  </Style>
+  <!-- The view sets the stripe class from the row's display index, so the
+       stripes survive sorting and container recycling. Cell loss tints and
+       the rounded selection stay above the row background. -->
+  <Style Selector="DataGrid#HopGrid DataGridRow.stripe">
+    <Setter Property="Background" Value="{DynamicResource WinMtrRowStripeBrush}" />
+  </Style>
+  <Style Selector="DataGrid#HopGrid DataGridRow:selected /template/ Rectangle#BackgroundRectangle">
+    <Setter Property="Margin" Value="4,1" />
+    <Setter Property="RadiusX" Value="4" />
+    <Setter Property="RadiusY" Value="4" />
+    <Setter Property="Opacity" Value="1" />
+    <Setter Property="Fill" Value="{DynamicResource SystemControlHighlightAccentBrush}" />
+  </Style>
+  <!-- WindowBase exposes IsActive, not an :active pseudo-class. Activity
+       belongs to the window, never to the trace session or its row models. -->
+  <Style Selector="Window[IsActive=false] DataGrid#HopGrid DataGridRow:selected /template/ Rectangle#BackgroundRectangle">
+    <Setter Property="Fill" Value="{DynamicResource WinMtrInactiveSelectionBrush}" />
+  </Style>
+  <Style Selector="Window[IsActive=false] DataGrid#HopGrid DataGridRow:selected TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource WinMtrInactiveSelectionTextBrush}" />
+  </Style>
+  <Style Selector="Window[IsActive=false] DataGrid#HopGrid DataGridRow.frozen:selected TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource WinMtrInactiveSelectionFrozenTextBrush}" />
+  </Style>
+  <Style Selector="DataGrid#HopGrid DataGridColumnHeader">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Foreground" Value="{DynamicResource WinMtrSubtleTextBrush}" />
+    <Setter Property="MinHeight" Value="24" />
+    <Setter Property="Background" Value="{DynamicResource WinMtrWindowBackgroundBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource WinMtrDetailBorderBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,0,0.5" />
+    <Setter Property="SeparatorBrush" Value="{DynamicResource WinMtrDetailBorderBrush}" />
+    <Setter Property="AreSeparatorsVisible" Value="True" />
+  </Style>
+  <Style Selector="DataGrid#HopGrid DataGridColumnHeader:not(:disabled) /template/ Rectangle#VerticalSeparator">
+    <Setter Property="Width" Value="0.5" />
+  </Style>
+  <Style Selector="DataGrid#HopGrid:not(:empty-columns) /template/ Rectangle#PART_ColumnHeadersAndRowsSeparator">
+    <Setter Property="Height" Value="0.5" />
+    <Setter Property="Fill" Value="{DynamicResource WinMtrDetailBorderBrush}" />
+  </Style>
+
+  <Style Selector="ToggleButton.detail-toggle">
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+    <Setter Property="MinHeight" Value="32" />
+  </Style>
+  <Style Selector="StackPanel#DetailDisclosure TextBlock">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource WinMtrSubtleTextBrush}" />
+  </Style>
+  <Style Selector="PathIcon#DetailChevron">
+    <Setter Property="Data" Value="M 0,0 L 12,6 L 0,12 Z" />
+    <Setter Property="Foreground" Value="{DynamicResource WinMtrSubtleTextBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.detail-toggle:checked PathIcon#DetailChevron">
+    <Setter Property="Data" Value="M 0,0 L 12,0 L 6,12 Z" />
+  </Style>
+  <Style Selector="Border.detail-tile">
+    <Setter Property="BorderBrush" Value="{DynamicResource WinMtrDetailBorderBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,0.5,0" />
+  </Style>
+  <Style Selector="Border#StatusBar">
+    <Setter Property="Height" Value="22" />
+  </Style>
+  <Style Selector="Border#StatusBar TextBlock">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Foreground" Value="{DynamicResource WinMtrSubtleTextBrush}" />
+  </Style>
+
+  <!-- Exclude the two deliberately chromeless buttons. Template-bound split
+       component values continue to come from the parent SplitButton. -->
+  <Style Selector="Button:not(.history-chevron):not(.footer-link), SplitButton">
+    <Setter Property="MinHeight" Value="{DynamicResource WinMtrControlMinHeight}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource WinMtrControlCornerRadius}" />
+    <Setter Property="Padding" Value="{DynamicResource WinMtrButtonPadding}" />
+    <Setter Property="Background" Value="{DynamicResource WinMtrControlBackgroundBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource WinMtrControlBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+  <!-- The 440-point settings dialog needs the existing compact horizontal
+       footprint for its three actions. Keep the macOS height and corners.
+       Repeat the class conditions to match the general rule's StyleTrigger
+       priority; this later scoped setter then wins over its padding. -->
+  <Style Selector="Grid#ButtonBar Button:not(.history-chevron):not(.footer-link)">
+    <Setter Property="Padding" Value="{DynamicResource WinMtrDialogButtonPadding}" />
+  </Style>
+  <!-- Keep a bounded target editor and compact actions in the content toolbar. -->
+  <Style Selector="Border#ToolbarChrome Button:not(.history-chevron):not(.footer-link), Border#ToolbarChrome SplitButton">
+    <Setter Property="Padding" Value="8,4" />
+  </Style>
+  <Style Selector="Border#ToolbarChrome Button, Border#ToolbarChrome SplitButton, Border#ToolbarChrome AutoCompleteBox, Border#ToolbarChrome TextBox">
+    <Setter Property="FontSize" Value="13" />
+  </Style>
+  <Style Selector="Border#ToolbarChrome TextBlock">
+    <Setter Property="FontSize" Value="13" />
+  </Style>
+  <Style Selector="TextBox, AutoCompleteBox, NumericUpDown">
+    <Setter Property="MinHeight" Value="{DynamicResource WinMtrControlMinHeight}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource WinMtrControlCornerRadius}" />
+    <Setter Property="Padding" Value="{DynamicResource WinMtrInputPadding}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+  <!-- Content alignment belongs to the concrete editors, not their shared
+       TemplatedControl base. TextBox also reaches the target's inner editor. -->
+  <Style Selector="TextBox">
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="NumericUpDown">
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="ComboBox">
+    <Setter Property="MinHeight" Value="{DynamicResource WinMtrControlMinHeight}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource WinMtrControlCornerRadius}" />
+    <Setter Property="Padding" Value="{DynamicResource WinMtrComboPadding}" />
+    <Setter Property="Background" Value="{DynamicResource WinMtrControlBackgroundBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource WinMtrControlBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+  <!-- Focus stays system-accent-driven. Errors retain Fluent's error border;
+       the focus treatment must not hide invalid input. -->
+  <Style Selector="Button, SplitButton, ToggleButton, CheckBox, ComboBox">
+    <Setter Property="FocusAdorner" Value="{StaticResource WinMtrFocusAdorner}" />
+  </Style>
+  <Style Selector="TextBox:focus:not(:error) /template/ Border#PART_BorderElement">
+    <Setter Property="BorderBrush" Value="{DynamicResource SystemControlHighlightAccentBrush}" />
+  </Style>
+  <Style Selector="ComboBox:focus-visible /template/ Border#HighlightBackground">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+  <Style Selector="Separator">
+    <Setter Property="Background" Value="{DynamicResource WinMtrDetailBorderBrush}" />
+  </Style>
+  <Style Selector="SplitButton /template/ Border#SeparatorBorder">
+    <Setter Property="Background" Value="{DynamicResource WinMtrDetailBorderBrush}" />
+  </Style>
+  <!-- Keep Fluent's track, paging, drag, auto-hide and scroll visibility.
+       Only the thumb, track paint and arrow affordances change. -->
+  <Style Selector="ScrollBar /template/ Thumb, ScrollBar[IsExpanded=true] /template/ Thumb">
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Background" Value="{DynamicResource WinMtrScrollThumbBrush}" />
+  </Style>
+  <Style Selector="ScrollBar /template/ Thumb:pointerover /template/ Border, ScrollBar /template/ Thumb:pressed /template/ Border">
+    <Setter Property="Background" Value="{DynamicResource WinMtrScrollThumbHoverBrush}" />
+  </Style>
+  <Style Selector="ScrollBar /template/ RepeatButton#PART_LineUpButton, ScrollBar /template/ RepeatButton#PART_LineDownButton">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+  <Style Selector="ScrollBar /template/ Rectangle#TrackRect">
+    <Setter Property="Fill" Value="Transparent" />
+    <Setter Property="StrokeThickness" Value="0" />
+  </Style>
+  <!-- Popup surfaces. A value set inside a Fluent template outranks a plain
+       style setter, so the cards are restyled through activated selectors on
+       the named template parts. -->
+  <Style Selector="MenuFlyoutPresenter">
+    <Setter Property="Background" Value="{DynamicResource WinMtrFloatingSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource WinMtrFloatingBorderBrush}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource WinMtrFloatingCornerRadius}" />
+  </Style>
+  <Style Selector="MenuFlyoutPresenter:not(:empty) /template/ Border#LayoutRoot">
+    <Setter Property="Padding" Value="{DynamicResource WinMtrFloatingPadding}" />
+  </Style>
+  <Style Selector="ComboBox:not(:disabled) /template/ Border#PopupBorder">
+    <Setter Property="Background" Value="{DynamicResource WinMtrFloatingSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource WinMtrFloatingBorderBrush}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource WinMtrFloatingCornerRadius}" />
+    <Setter Property="Padding" Value="{DynamicResource WinMtrFloatingPadding}" />
+  </Style>
+  <Style Selector="AutoCompleteBox:not(:disabled) /template/ Border#PART_SuggestionsContainer">
+    <Setter Property="Background" Value="{DynamicResource WinMtrFloatingSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource WinMtrFloatingBorderBrush}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource WinMtrFloatingCornerRadius}" />
+    <Setter Property="Padding" Value="{DynamicResource WinMtrFloatingPadding}" />
+  </Style>
+  <!-- The theme picker reads as a popup button: the stacked up/down chevron
+       replaces the single disclosure glyph, and the drop-down overlay becomes
+       the hairline separator at the chevron column. The history chevron is a
+       different control and keeps its single glyph. -->
+  <Style Selector="ComboBox:not(:disabled) /template/ PathIcon#DropDownGlyph">
+    <Setter Property="Data" Value="{StaticResource WinMtrPopupButtonChevronGeometry}" />
+  </Style>
+  <Style Selector="ComboBox:not(:disabled) /template/ Border#DropDownOverlay">
+    <Setter Property="IsVisible" Value="True" />
+    <Setter Property="IsHitTestVisible" Value="False" />
+    <Setter Property="BorderBrush" Value="{DynamicResource WinMtrControlBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1,0,0,0" />
+  </Style>
+  <!-- Popup rows: macOS menu type and metrics. The closed controls keep the
+       shell's 14-point text and 28-point height. -->
+  <Style Selector="MenuFlyoutPresenter MenuItem">
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="CornerRadius" Value="{DynamicResource WinMtrHighlightCornerRadius}" />
+    <Setter Property="ToggleType" Value="CheckBox" />
+  </Style>
+  <Style Selector="ComboBoxItem">
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="CornerRadius" Value="{DynamicResource WinMtrHighlightCornerRadius}" />
+  </Style>
+  <Style Selector="ListBoxItem">
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="CornerRadius" Value="{DynamicResource WinMtrHighlightCornerRadius}" />
+  </Style>
+  <!-- Highlight: pointer-over and selection paint the system accent with the
+       contrast text brush the route grid owns, so one rule follows a live accent
+       change in both surfaces. -->
+  <Style Selector="MenuFlyoutPresenter MenuItem:selected /template/ Border#PART_LayoutRoot">
+    <Setter Property="Background" Value="{DynamicResource SystemControlHighlightAccentBrush}" />
+  </Style>
+  <Style Selector="MenuFlyoutPresenter MenuItem:selected">
+    <Setter Property="Foreground" Value="{DynamicResource WinMtrRowSelectedTextBrush}" />
+  </Style>
+  <Style Selector="MenuFlyoutPresenter MenuItem:selected /template/ ContentPresenter#PART_HeaderPresenter">
+    <Setter Property="Foreground" Value="{DynamicResource WinMtrRowSelectedTextBrush}" />
+  </Style>
+  <Style Selector="ComboBoxItem:pointerover /template/ ContentPresenter, ComboBoxItem:selected /template/ ContentPresenter, ComboBoxItem:pressed /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SystemControlHighlightAccentBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource WinMtrRowSelectedTextBrush}" />
+  </Style>
+  <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter, ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter, ListBoxItem:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SystemControlHighlightAccentBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource WinMtrRowSelectedTextBrush}" />
+  </Style>
+</Styles>

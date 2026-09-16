@@ -1,0 +1,76 @@
+name: Bug report
+description: Report a defect in tracing, reports, or the window.
+labels: [needs-triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Fill what you can. An agent or a human uses this to reproduce the fault.
+        Do not paste private targets you cannot share. Use `example.com` style stand-ins where possible.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Release label from the status bar (for example v0.1.0) or commit SHA for a source build.
+      placeholder: v0.1.0
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows x64
+        - Linux x64
+        - Linux arm64
+        - macOS arm64
+        - macOS x64
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: One clear sentence. What breaks, and where (grid, detail pane, export, console)?
+      placeholder: Sorting by loss drops the failing hop out of view while the trace runs.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Numbered steps an agent can follow headlessly where possible.
+      placeholder: |
+        1. `dotnet run --project src/WinMtr.Desktop`
+        2. Trace example.com for 60 seconds.
+        3. Sort by Loss %.
+        4. Watch the top row.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+      description: What the route snapshot, report, or grid should show.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+      description: What it shows instead. Paste short excerpts, not full traces.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and evidence
+      description: Commands run, test output, report excerpt, or screenshot notes.
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I checked for duplicate issues.
+        - label: I include no secrets, tokens, or private host names.

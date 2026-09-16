@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title description">
+  <title id="title">WinMTR Route Pulse light-surface icon</title>
+  <desc id="description">Three distributed network endpoints connected by routes, with a red probe and two-segment motion trail.</desc>
+  <g fill="none" stroke="#082B57" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M438 292 284 650" stroke-width="104" />
+    <path d="M586 292 740 650" stroke-width="104" />
+  </g>
+  <g fill="none" stroke="#F4F1E8" stroke-linecap="round">
+    <path d="M438 292 284 650" stroke-width="30" />
+    <path d="M586 292 740 650" stroke-width="30" />
+  </g>
+  <g fill="#082B57">
+    <circle cx="512" cy="210" r="142" />
+    <circle cx="220" cy="792" r="142" />
+    <circle cx="804" cy="792" r="142" />
+  </g>
+  <g fill="#F4F1E8">
+    <circle cx="512" cy="210" r="76" />
+    <circle cx="220" cy="792" r="76" />
+    <circle cx="804" cy="792" r="76" />
+  </g>
+  <g fill="none" stroke="#FF241F" stroke-width="30" stroke-linecap="round">
+    <path d="M613 355 625 382" />
+    <path d="M641 421 653 448" />
+  </g>
+  <circle cx="681" cy="512" r="62" fill="#F4F1E8" />
+  <circle cx="681" cy="512" r="45" fill="#FF241F" />
+</svg>

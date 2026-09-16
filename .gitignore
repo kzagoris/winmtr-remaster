@@ -1,0 +1,39 @@
+# Visual Studio solution cache (beside WinMtr.Remaster.sln)
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.slnx.user
+
+# .NET build outputs
+[Bb]in/
+[Oo]bj/
+[Aa]rtifacts/
+TestResults/
+*.nupkg
+*.snupkg
+*.coverage
+*.coveragexml
+*.trx
+
+# SDD controller workspace (scratch: ledger, briefs, review packages)
+.superpowers/
+.deslop/
+
+# Local agent skills and MCP config (dev-only, not part of the product)
+.agents/
+.claude/skills/
+.codex/
+.mcp.json
+.opencode/
+opencode.json
+skills-lock.json
+
+# Local handoffs (dev-only working notes)
+docs/handoffs/
+
+# OS and IDE droppings
+.DS_Store
+Thumbs.db
+.idea/

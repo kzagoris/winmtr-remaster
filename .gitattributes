@@ -1,0 +1,7 @@
+* text=auto eol=lf
+tests/WinMtr.Core.Tests/golden/*.txt -text
+*.ico binary
+*.icns binary
+*.png binary
+*.jpg binary
+*.webp binary

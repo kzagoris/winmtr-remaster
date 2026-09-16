@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <IsPackable>false</IsPackable>
+    <!-- xUnit.net v3 test projects are executables that run themselves. -->
+    <OutputType>Exe</OutputType>
+    <!-- Avalonia.Headless.XUnit 12 builds on xunit.v3.extensibility.core
+         3.2.2, so xunit.v3 stays on the 3.2 line rather than the newer
+         4.x MTP-v2 packages. This stays on VSTest like every other test
+         project here: Microsoft.NET.Test.Sdk + xunit.runner.visualstudio,
+         and the VSTestTestCaseFilter default in Directory.Build.props. -->
+    <IsTestingPlatformApplication>false</IsTestingPlatformApplication>
+    <!-- Same transitive-audit carve-out as the app project (see its comment). -->
+    <WarningsNotAsErrors>NU1903</WarningsNotAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Headless" Version="12.1.2" />
+    <PackageReference Include="Avalonia.Headless.XUnit" Version="12.1.2" />
+    <PackageReference Include="coverlet.collector" Version="10.0.1">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.0" />
+    <PackageReference Include="xunit.v3" Version="3.2.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="4.0.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\WinMtr.Desktop\WinMtr.Desktop.csproj" />
+    <ProjectReference Include="..\WinMtr.TestSupport\WinMtr.TestSupport.csproj" />
+  </ItemGroup>
+
+</Project>

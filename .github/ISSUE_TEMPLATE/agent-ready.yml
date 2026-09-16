@@ -1,0 +1,75 @@
+name: Agent-ready task
+description: Structured task an AI agent can execute directly. Use for well-scoped work.
+labels: [needs-triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        An agent reads this issue cold. Give pointers, not tribal knowledge.
+        When Goal, Context, Acceptance, Boundaries, and Verification are all filled,
+        automation applies the `agent-ready` label. See `AGENTS.md` for commands.
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: One outcome. Start with a verb.
+      placeholder: Reconcile the hop grid by hop index so sorting by loss keeps rows stable.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context pointers
+      description: Exact files, ADRs, and specs the agent must read first.
+      placeholder: |
+        - CONTEXT.md: route snapshot, retained hop rows
+        - docs/adr/0007-native-aot-release-matrix.md
+        - src/WinMtr.Desktop/Views/MainWindow.axaml
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Checkable statements. An agent must verify each one.
+      placeholder: |
+        - [ ] Sorting by loss keeps the failing hop visible while figures change.
+        - [ ] Exported reports stay trimmed of trailing silence.
+    validations:
+      required: true
+  - type: textarea
+    id: boundaries
+    attributes:
+      label: Boundaries
+      description: Always / Ask first / Never. Name paths the agent must not touch.
+      placeholder: |
+        Always: add a headless Avalonia test for the changed behavior.
+        Ask first: public API or report format changes.
+        Never: secrets, bin/obj, golden values without an intentional format change.
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification
+      description: Exact commands the agent must run before it declares done.
+      value: |
+        ```
+        dotnet build WinMtr.Remaster.sln -c Release --no-restore
+        dotnet test WinMtr.Remaster.sln -c Release --no-build
+        dotnet format WinMtr.Remaster.sln --verify-no-changes --no-restore
+        git diff --check
+        ```
+    validations:
+      required: true
+  - type: dropdown
+    id: complexity
+    attributes:
+      label: Complexity
+      description: High triggers a plan-first gate. The agent writes docs/plans/<issue>-plan.md and waits for /approve-plan.
+      options:
+        - complexity:low
+        - complexity:medium
+        - complexity:high
+    validations:
+      required: true

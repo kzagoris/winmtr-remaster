@@ -1,0 +1,807 @@
+﻿<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:WinMtr.Desktop.ViewModels"
+        xmlns:views="using:WinMtr.Desktop.Views"
+        x:Class="WinMtr.Desktop.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Classes="main-window"
+        Title="WinMTR"
+        MinWidth="{DynamicResource WinMtrMainWindowMinWidth}" MinHeight="480"
+        Width="1100" Height="650"
+        TransparencyLevelHint="None"
+        TransparencyBackgroundFallback="{DynamicResource WinMtrWindowFallbackBrush}"
+        FontWeight="Normal"
+        TextOptions.TextRenderingMode="Antialias"
+        Background="{DynamicResource WinMtrWindowBackgroundBrush}">
+  <Window.Resources>
+    <!-- One shared converter turns the shell's sort descriptor into the glyph
+    of each column header, so only the active column carries a glyph. -->
+    <views:SortGlyphConverter x:Key="SortGlyph" />
+    <!-- One shared converter gives a column header the note that belongs to
+    it. Only Sent has one: the probe interval rule, which says why the
+    counts of two hops can be different. -->
+    <views:ColumnHeaderNoteConverter x:Key="ColumnNote" />
+    <!-- Every grid column header is its title beside its sort glyph. Written
+    once here: a column supplies only its title, which also names the
+    sortable column, so a new column needs no header markup of its own. -->
+    <DataTemplate x:Key="ColumnHeader" x:DataType="x:String">
+      <StackPanel Orientation="Horizontal" Spacing="4"
+                  ToolTip.Tip="{CompiledBinding Converter={StaticResource ColumnNote}}">
+        <TextBlock Text="{CompiledBinding}" />
+        <TextBlock Classes="sort-glyph">
+          <TextBlock.Text>
+            <!-- Element-form bindings stay spelled Binding: Avalonia 12's
+            transformer turns them into compiled bindings, while the
+            literal CompiledBinding class now takes a typed path that
+            element syntax cannot express. -->
+            <MultiBinding Converter="{StaticResource SortGlyph}">
+              <Binding Path="$parent[Window].((vm:MainWindowViewModel)DataContext).SortColumn" />
+              <Binding Path="$parent[Window].((vm:MainWindowViewModel)DataContext).SortDirection" />
+              <Binding />
+            </MultiBinding>
+          </TextBlock.Text>
+        </TextBlock>
+      </StackPanel>
+    </DataTemplate>
+  </Window.Resources>
+
+  <Window.Styles>
+    <Style Selector="Border.banner-info">
+      <Setter Property="Background" Value="{DynamicResource WinMtrBannerInfoBackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource WinMtrBannerInfoBorderBrush}" />
+    </Style>
+    <Style Selector="Border.banner-warning">
+      <Setter Property="Background" Value="{DynamicResource WinMtrBannerWarningBackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource WinMtrBannerWarningBorderBrush}" />
+    </Style>
+    <Style Selector="Border.banner-error">
+      <Setter Property="Background" Value="{DynamicResource WinMtrBannerErrorBackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource WinMtrBannerErrorBorderBrush}" />
+    </Style>
+    <!-- Retained-row treatments, driven by row classes the code-behind keeps
+    in step with the row view model. A frozen row takes muted text on an
+    unchanged surface; an identity-changed row takes a brief accent-tinted
+    background while its highlight flag stands. Theme resources only. -->
+    <Style Selector="DataGridRow.frozen">
+      <Setter Property="TextElement.Foreground" Value="{DynamicResource WinMtrFrozenTextBrush}" />
+    </Style>
+    <Style Selector="DataGridRow.identity-changed">
+      <Setter Property="Background" Value="{DynamicResource WinMtrIdentityChangeBackgroundBrush}" />
+    </Style>
+    <!-- The selected hop row takes a solid accent fill (see App.axaml), so its
+    text must change with it: the grid theme has no selected-foreground
+    key of its own. These two rules come after the frozen rule, so the
+    selected row wins, and the frozen-and-selected row wins over both. A
+    solid fill covers the identity-change background, which is accepted:
+    one row is selected at a time and the highlight is brief. -->
+    <Style Selector="DataGridRow:selected">
+      <Setter Property="TextElement.Foreground" Value="{DynamicResource WinMtrRowSelectedTextBrush}" />
+    </Style>
+    <Style Selector="DataGridRow.frozen:selected">
+      <Setter Property="TextElement.Foreground" Value="{DynamicResource WinMtrRowSelectedFrozenTextBrush}" />
+    </Style>
+    <!-- The Host cell carries the label over the numeric address. The address
+    is secondary data, so TextBlock.host-address paints it with the muted
+    brush. An explicit Foreground on the TextBlock beats the colour that
+    the row passes down, so each row state needs a rule of its own. The
+    three rules after the base rule keep the contrast-computed colour on
+    a retained row and on a selected row. Later rules win, so the selected
+    row wins over the frozen row, and the frozen-and-selected row wins
+    over both. -->
+    <Style Selector="TextBlock.host-address">
+      <Setter Property="Foreground" Value="{DynamicResource WinMtrSubtleTextBrush}" />
+    </Style>
+    <Style Selector="DataGridRow.frozen TextBlock.host-address">
+      <Setter Property="Foreground" Value="{DynamicResource WinMtrFrozenTextBrush}" />
+    </Style>
+    <Style Selector="DataGridRow:selected TextBlock.host-address">
+      <Setter Property="Foreground" Value="{DynamicResource WinMtrRowSelectedTextBrush}" />
+    </Style>
+    <Style Selector="DataGridRow.frozen:selected TextBlock.host-address">
+      <Setter Property="Foreground" Value="{DynamicResource WinMtrRowSelectedFrozenTextBrush}" />
+    </Style>
+    <!-- Selection is per row, so the stock per-cell focus rectangle must not
+    show. The selected-row accent fill already shows where the keyboard
+    is, because keyboard navigation moves the selection. Fluent turns
+    that rectangle on through a grid named FocusVisual inside the cell
+    template; this rule keeps it hidden while the cell has focus. -->
+    <Style Selector="DataGridCell:focus /template/ Grid#FocusVisual">
+      <Setter Property="IsVisible" Value="False" />
+    </Style>
+    <!-- Severity encoding in the route grid. The Loss cell carries a tint
+    band and a slim bar. The band follows the loss grade. The bar shows
+    the loss fraction, and its colour follows the grade ramp too. A
+    latency outlier cell carries a tint and a triangle glyph. The glyph
+    is a text mark, not a PathIcon. It inherits the row text colour, so
+    the frozen and selected rules keep it readable. Theme resources
+    only. The selected row drops the tint: its accent fill is solid
+    (see App.axaml), and a tint would mix with that accent. The frozen
+    row drops the tint too: its muted text needs the plain surface.
+    The bar and the glyph stay in both cases. -->
+    <Style Selector="Grid.loss-cell.loss-low Border.loss-tint">
+      <Setter Property="Background" Value="{DynamicResource WinMtrLossLowBackgroundBrush}" />
+    </Style>
+    <Style Selector="Grid.loss-cell.loss-low ProgressBar.loss-bar">
+      <Setter Property="Foreground" Value="{DynamicResource WinMtrLossLowBarBrush}" />
+    </Style>
+    <Style Selector="Grid.loss-cell.loss-moderate Border.loss-tint">
+      <Setter Property="Background" Value="{DynamicResource WinMtrLossModerateBackgroundBrush}" />
+    </Style>
+    <Style Selector="Grid.loss-cell.loss-moderate ProgressBar.loss-bar">
+      <Setter Property="Foreground" Value="{DynamicResource WinMtrLossModerateBarBrush}" />
+    </Style>
+    <Style Selector="Grid.loss-cell.loss-high Border.loss-tint">
+      <Setter Property="Background" Value="{DynamicResource WinMtrLossHighBackgroundBrush}" />
+    </Style>
+    <Style Selector="Grid.loss-cell.loss-high ProgressBar.loss-bar">
+      <Setter Property="Foreground" Value="{DynamicResource WinMtrLossHighBarBrush}" />
+    </Style>
+    <Style Selector="Grid.loss-cell.loss-total Border.loss-tint">
+      <Setter Property="Background" Value="{DynamicResource WinMtrLossTotalBackgroundBrush}" />
+    </Style>
+    <Style Selector="Grid.loss-cell.loss-total ProgressBar.loss-bar">
+      <Setter Property="Foreground" Value="{DynamicResource WinMtrLossTotalBarBrush}" />
+    </Style>
+    <Style Selector="DataGridRow:selected Border.loss-tint">
+      <Setter Property="Opacity" Value="0" />
+    </Style>
+    <Style Selector="DataGridRow:selected Border.latency-tint">
+      <Setter Property="Opacity" Value="0" />
+    </Style>
+    <Style Selector="DataGridRow.frozen Border.loss-tint">
+      <Setter Property="Opacity" Value="0" />
+    </Style>
+    <Style Selector="DataGridRow.frozen Border.latency-tint">
+      <Setter Property="Opacity" Value="0" />
+    </Style>
+    <!-- A slim bar sits under the value. The stock ProgressBar supplies the
+    fraction fill. The small geometry is a local value on each bar: the
+    stock theme gives a horizontal bar a 200 px minimum width and a
+    taller minimum height. -->
+    <Style Selector="ProgressBar.loss-bar">
+      <Setter Property="Background" Value="{DynamicResource WinMtrLossBarTrackBrush}" />
+    </Style>
+    <!-- Every latency cell tints with the one outlier brush, so the four
+    columns state only which measurement is the spike. -->
+    <Style Selector="Border.latency-tint">
+      <Setter Property="Background" Value="{DynamicResource WinMtrLatencyOutlierBackgroundBrush}" />
+    </Style>
+    <Style Selector="TextBlock.outlier-glyph">
+      <Setter Property="FontSize" Value="10" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <!-- Detail pane typography: a small caption over a large value, so a
+    glance reads the numbers and the labels stay out of the way. -->
+    <Style Selector="TextBlock.detail-caption">
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="Foreground" Value="{DynamicResource WinMtrSubtleTextBrush}" />
+    </Style>
+    <Style Selector="TextBlock.detail-value">
+      <Setter Property="FontSize" Value="16" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="Border.detail-tile">
+      <Setter Property="Background" Value="{DynamicResource WinMtrDetailTileBackgroundBrush}" />
+      <Setter Property="CornerRadius" Value="{DynamicResource WinMtrTileCornerRadius}" />
+      <Setter Property="Padding" Value="{DynamicResource WinMtrTilePadding}" />
+      <Setter Property="MinWidth" Value="92" />
+    </Style>
+    <!-- Detail pane collapse toggle: borderless and transparent like the
+    history chevron, and the checked surface stays transparent so only
+    the Hide/Show word changes between the two states. Theme resources
+    only. -->
+    <Style Selector="ToggleButton.detail-toggle">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="6,2" />
+      <Setter Property="Cursor" Value="Hand" />
+    </Style>
+    <Style Selector="ToggleButton.detail-toggle /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <Style Selector="ToggleButton.detail-toggle:checked /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <!-- History chevron inside the target box: borderless and transparent
+    so the input keeps its plain-text-box baseline and height; the
+    popup itself carries the open state, so no :checked treatment.
+    Theme resources only. -->
+    <Style Selector="Button.history-chevron">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="6,0" />
+      <Setter Property="MinWidth" Value="0" />
+      <Setter Property="MinHeight" Value="0" />
+      <Setter Property="VerticalAlignment" Value="Stretch" />
+      <Setter Property="Focusable" Value="False" />
+      <Setter Property="Cursor" Value="Hand" />
+    </Style>
+    <!-- Sort help lives on the headers only: a tip on the whole grid
+    also shows over the rows, where it reads out of place. The inner
+    header content keeps its own column note (Sent), which wins over
+    this header tip when both exist. -->
+    <Style Selector="DataGridColumnHeader">
+      <Setter Property="ToolTip.Tip" Value="Select a header to sort. Select the same header a third time to restore route order." />
+    </Style>
+    <!-- The sort glyph is a quiet mark beside the header text: it keeps its
+    place empty on every column that is not the active one. -->
+    <Style Selector="TextBlock.sort-glyph">
+      <Setter Property="FontSize" Value="{DynamicResource WinMtrSortGlyphFontSize}" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="Opacity" Value="0.75" />
+    </Style>
+    <!-- Footer author credit reads as a link but stays a plain button so the
+    view model keeps only data and the view owns opening the browser.
+    The pointerover/pressed overrides kill the default button chrome
+    (the gray hover block) so only the underlined name shows. -->
+    <Style Selector="Button.footer-link">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="Cursor" Value="Hand" />
+    </Style>
+    <Style Selector="Button.footer-link:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <Style Selector="Button.footer-link:pressed /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+  </Window.Styles>
+
+  <Grid RowDefinitions="Auto,Auto,Auto,*,Auto,Auto" ColumnDefinitions="*">
+    <!-- Keep the command bar below the native title bar on every platform.
+    Let it grow vertically when the actions need another row. -->
+    <Border Grid.Row="0" Grid.Column="0" Name="ToolbarChrome" Background="{DynamicResource SystemControlTransparentBrush}">
+      <views:ToolbarPanel Name="Toolbar" Margin="4" Orientation="Horizontal"
+                          VerticalAlignment="Center"
+                          CanWrap="{DynamicResource WinMtrToolbarCanWrap}">
+        <TextBlock Text="Target:" VerticalAlignment="Center" Margin="{DynamicResource WinMtrToolbarLabelMargin}" />
+        <AutoCompleteBox Name="TargetInput"
+                         MinWidth="{DynamicResource WinMtrTargetMinWidth}"
+                         MaxWidth="{DynamicResource WinMtrTargetMaxWidth}"
+                         Margin="0,4"
+                         VerticalAlignment="Center"
+                         FilterMode="Contains"
+                         MinimumPrefixLength="0"
+                         MaxDropDownHeight="200"
+                         PlaceholderText="example.com"
+                         AutomationProperties.Name="Target"
+                         AutomationProperties.HelpText="Enter a hostname or IP address. History suggestions filter as you type."
+                         ItemsSource="{CompiledBinding TargetHistory}"
+                         Text="{CompiledBinding Target, Mode=TwoWay}"
+                         IsEnabled="{CompiledBinding IsSessionIdle}"
+                         KeyDown="OnTargetInputKeyDown">
+          <AutoCompleteBox.InnerRightContent>
+            <!-- Chevron lives inside the text area so the input keeps its
+            own height; borderless and unfocusable so tab order and
+            baseline stay exactly like a plain text box. -->
+            <Button Name="TargetHistoryButton"
+                    Classes="history-chevron"
+                    ToolTip.Tip="Show target history."
+                    AutomationProperties.Name="Show target history"
+                    IsEnabled="{CompiledBinding IsSessionIdle}"
+                    Click="OnTargetHistoryClicked">
+              <PathIcon Data="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z" Width="12" Height="12" />
+            </Button>
+          </AutoCompleteBox.InnerRightContent>
+          <AutoCompleteBox.ItemTemplate>
+            <DataTemplate x:DataType="x:String">
+              <TextBlock Text="{CompiledBinding}" Padding="{DynamicResource WinMtrHistoryItemPadding}" TextTrimming="CharacterEllipsis" />
+            </DataTemplate>
+          </AutoCompleteBox.ItemTemplate>
+        </AutoCompleteBox>
+        <Button Name="StartStopButton"
+                MinWidth="{DynamicResource WinMtrStartStopMinWidth}"
+                Margin="{DynamicResource WinMtrToolbarActionMargin}"
+                Content="{CompiledBinding StartStopLabel}"
+                Command="{CompiledBinding StartStopCommand}" />
+        <Button Name="SettingsButton"
+                Margin="{DynamicResource WinMtrToolbarActionMargin}"
+                Content="Settings"
+                IsEnabled="{CompiledBinding IsSessionIdle}"
+                Click="OnSettingsClicked" />
+        <!-- One control per report action: the primary half runs the action in
+        the shown format, the drop-down half picks a different format and
+        runs it at once. Both halves read the same renderer-provided list. -->
+        <SplitButton Name="CopyButton"
+                     Margin="{DynamicResource WinMtrToolbarCopyMargin}"
+                     Content="{CompiledBinding CopyFormat.Name, StringFormat='Copy: {0}'}"
+                     ToolTip.Tip="Copy the current route in the shown format."
+                     Command="{CompiledBinding CopyCommand}">
+          <SplitButton.Flyout>
+            <!-- Each row binds to itself alone: name, mark and command. A
+            flyout opens in a popup outside this window's visual tree,
+            where a binding that walks up to the window finds nothing. -->
+            <MenuFlyout ItemsSource="{CompiledBinding CopyFormatChoices}">
+              <MenuFlyout.ItemContainerTheme>
+                <ControlTheme TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}"
+                              x:DataType="vm:ReportFormatChoice">
+                  <Setter Property="Header" Value="{CompiledBinding Name}" />
+                  <Setter Property="ToggleType" Value="Radio" />
+                  <Setter Property="IsChecked" Value="{CompiledBinding IsActive}" />
+                  <Setter Property="Command" Value="{CompiledBinding Command}" />
+                  <Setter Property="CommandParameter" Value="{CompiledBinding Format}" />
+                </ControlTheme>
+              </MenuFlyout.ItemContainerTheme>
+            </MenuFlyout>
+          </SplitButton.Flyout>
+        </SplitButton>
+        <SplitButton Name="ExportButton"
+                     Margin="{DynamicResource WinMtrToolbarActionMargin}"
+                     Content="{CompiledBinding ExportFormat.Name, StringFormat='Export: {0}'}"
+                     ToolTip.Tip="Save the current route in the shown format."
+                     Command="{CompiledBinding ExportCommand}">
+          <SplitButton.Flyout>
+            <!-- Each row binds to itself alone: name, mark and command. A
+            flyout opens in a popup outside this window's visual tree,
+            where a binding that walks up to the window finds nothing. -->
+            <MenuFlyout ItemsSource="{CompiledBinding ExportFormatChoices}">
+              <MenuFlyout.ItemContainerTheme>
+                <ControlTheme TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}"
+                              x:DataType="vm:ReportFormatChoice">
+                  <Setter Property="Header" Value="{CompiledBinding Name}" />
+                  <Setter Property="ToggleType" Value="Radio" />
+                  <Setter Property="IsChecked" Value="{CompiledBinding IsActive}" />
+                  <Setter Property="Command" Value="{CompiledBinding Command}" />
+                  <Setter Property="CommandParameter" Value="{CompiledBinding Format}" />
+                </ControlTheme>
+              </MenuFlyout.ItemContainerTheme>
+            </MenuFlyout>
+          </SplitButton.Flyout>
+        </SplitButton>
+      </views:ToolbarPanel>
+    </Border>
+
+    <!-- Invalid-target message: its own row below the toolbar, so showing or
+    clearing it never moves a button. The Auto row collapses while the
+    message is hidden, and the wrap keeps a long message readable. -->
+    <TextBlock Grid.Row="1"
+               Name="TargetErrorText"
+               Margin="12,0,12,4"
+               Text="{CompiledBinding TargetError}"
+               IsVisible="{CompiledBinding HasTargetError}"
+               TextWrapping="Wrap"
+               Foreground="{DynamicResource WinMtrErrorTextBrush}" />
+
+    <!-- Transient copy and export confirmations. Anchored popups, never the
+    status bar: the view model opens them with route length plus format
+    name and closes them after a short delay or light-dismiss. -->
+    <Popup Name="CopyConfirmationPopup"
+           PlacementTarget="{CompiledBinding #CopyButton}"
+           Placement="Bottom"
+           IsLightDismissEnabled="True"
+           IsOpen="{CompiledBinding CopyConfirmation.IsOpen, Mode=TwoWay}">
+      <Border Background="{DynamicResource WinMtrDetailBackgroundBrush}"
+              BorderBrush="{DynamicResource WinMtrDetailBorderBrush}"
+              BorderThickness="1"
+              CornerRadius="{DynamicResource WinMtrSurfaceCornerRadius}"
+              Padding="{DynamicResource WinMtrPopupPadding}">
+        <TextBlock Text="{CompiledBinding CopyConfirmation.Text}"
+                   AutomationProperties.Name="{CompiledBinding CopyConfirmation.Text}"
+                   TextWrapping="Wrap"
+                   MaxWidth="320" />
+      </Border>
+    </Popup>
+    <Popup Name="ExportConfirmationPopup"
+           PlacementTarget="{CompiledBinding #ExportButton}"
+           Placement="Bottom"
+           IsLightDismissEnabled="True"
+           IsOpen="{CompiledBinding ExportConfirmation.IsOpen, Mode=TwoWay}">
+      <Border Background="{DynamicResource WinMtrDetailBackgroundBrush}"
+              BorderBrush="{DynamicResource WinMtrDetailBorderBrush}"
+              BorderThickness="1"
+              CornerRadius="{DynamicResource WinMtrSurfaceCornerRadius}"
+              Padding="{DynamicResource WinMtrPopupPadding}">
+        <TextBlock Text="{CompiledBinding ExportConfirmation.Text}"
+                   AutomationProperties.Name="{CompiledBinding ExportConfirmation.Text}"
+                   TextWrapping="Wrap"
+                   MaxWidth="320" />
+      </Border>
+    </Popup>
+
+    <!-- Banner stack: non-modal, dismissible, zero height when empty. -->
+    <ItemsControl Grid.Row="2"
+                  Name="BannerStack"
+                  ItemsSource="{CompiledBinding Banners}">
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="vm:BannerViewModel">
+          <Border Classes="banner"
+                  Classes.banner-info="{CompiledBinding IsInfo}"
+                  Classes.banner-warning="{CompiledBinding IsWarning}"
+                  Classes.banner-error="{CompiledBinding IsError}"
+                  BorderThickness="1"
+                  CornerRadius="{DynamicResource WinMtrBannerCornerRadius}"
+                  Padding="{DynamicResource WinMtrBannerPadding}"
+                  Margin="8,4,8,0">
+            <DockPanel>
+              <Button Content="Dismiss"
+                      DockPanel.Dock="Right"
+                      Margin="8,0,0,0"
+                      Command="{CompiledBinding DismissCommand}" />
+              <TextBlock Text="{CompiledBinding Message}"
+                         VerticalAlignment="Center"
+                         TextWrapping="Wrap" />
+            </DockPanel>
+          </Border>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+
+    <!-- Route grid takes all free space in both directions. The grid binds the
+    session's visible order; header clicks feed the session's sort
+    descriptor (see Sorting handler): a new column sorts ascending, the
+    active column toggles to descending, a third select restores
+    hop-number order. Every column offers sorting through the row value
+    contract, identified by SortMemberPath. -->
+    <Grid Grid.Row="3" Margin="8,4">
+      <DataGrid Name="HopGrid"
+                ItemsSource="{CompiledBinding SortedRows}"
+                SelectedItem="{CompiledBinding SelectedRow, Mode=TwoWay}"
+                AutoGenerateColumns="False"
+                IsReadOnly="True"
+                SelectionMode="Single"
+                HorizontalScrollBarVisibility="Auto"
+                LoadingRow="OnHopRowLoading"
+                UnloadingRow="OnHopRowUnloading"
+                Sorting="OnHopGridSorting"
+                CanUserReorderColumns="False"
+                CanUserResizeColumns="True"
+                CanUserSortColumns="True">
+        <DataGrid.Columns>
+          <!-- Every column keeps a minimum width that fits its header. A
+          narrow window then overflows into the grid's horizontal
+          scrollbar instead of squeezing columns into unreadable
+          slivers. The minimums stay below the content widths of a wide
+          window, so the wide layout is unchanged. Host is the star
+          column: it takes the free space and keeps a real minimum. -->
+          <DataGridTextColumn Header="Hop" HeaderTemplate="{StaticResource ColumnHeader}" Binding="{CompiledBinding Hop}" SortMemberPath="Hop" MinWidth="60" />
+          <!-- The Host cell carries one or two lines: the displayed label,
+          and under it the numeric address when name resolution gave a
+          different label. Sorting stays on the label, so the sort key
+          does not change with the second line. -->
+          <DataGridTemplateColumn Header="Host" HeaderTemplate="{StaticResource ColumnHeader}" SortMemberPath="Host" Width="*" MinWidth="120">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate x:DataType="vm:HopRowViewModel">
+                <!-- One tip covers the whole cell: the full label and, when it
+                differs, the numeric address. The row view model returns
+                null while the row has no identity, because Avalonia opens
+                a tip for an empty string but not for a null tip. -->
+                <Panel ToolTip.Tip="{CompiledBinding HostToolTip}">
+                  <TextBlock Classes="host-label"
+                             Text="{CompiledBinding HostLabel}"
+                             IsVisible="{DynamicResource WinMtrHostLabelVisible}"
+                             VerticalAlignment="Center"
+                             TextTrimming="CharacterEllipsis" />
+                  <StackPanel Classes="host-multiline" IsVisible="{DynamicResource WinMtrHostMultilineVisible}">
+                    <TextBlock Text="{CompiledBinding Host}" TextTrimming="CharacterEllipsis" />
+                    <!-- The host-address style paints this line with the muted
+                    brush, and the row-state rules keep the colour that the
+                    accent contrast service computes for a retained or
+                    selected row. FontSize 11 keeps the line small. -->
+                    <TextBlock Classes="host-address"
+                               Text="{CompiledBinding Address}"
+                               IsVisible="{CompiledBinding ShowAddress}"
+                               FontSize="11"
+                               TextTrimming="CharacterEllipsis" />
+                  </StackPanel>
+                </Panel>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+          <!-- Loss and the four latency columns keep their values, their sort
+          keys, and the waiting dash. Only the cell presentation gains
+          the severity cues. The severity cues bind the derived severity;
+          the values bind the row fields as before. -->
+          <DataGridTemplateColumn Header="Loss" HeaderTemplate="{StaticResource ColumnHeader}" SortMemberPath="LossPercent" MinWidth="60">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate x:DataType="vm:HopRowViewModel">
+                <Grid Classes="loss-cell"
+                      Classes.loss-low="{CompiledBinding Severity.IsLossLow}"
+                      Classes.loss-moderate="{CompiledBinding Severity.IsLossModerate}"
+                      Classes.loss-high="{CompiledBinding Severity.IsLossHigh}"
+                      Classes.loss-total="{CompiledBinding Severity.IsLossTotal}">
+                  <Border Classes="loss-tint" />
+                  <TextBlock Text="{CompiledBinding LossPercent, StringFormat='{}{0:F1}%'}"
+                             Margin="12,0"
+                             VerticalAlignment="Center" />
+                  <ProgressBar Classes="loss-bar"
+                               Height="2" MinWidth="0" MinHeight="0"
+                               VerticalAlignment="Bottom"
+                               Minimum="0" Maximum="100"
+                               Value="{CompiledBinding LossPercent}"
+                               IsVisible="{CompiledBinding Severity.HasLoss}"
+                               IsHitTestVisible="False" />
+                </Grid>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+          <DataGridTextColumn Header="Sent" HeaderTemplate="{StaticResource ColumnHeader}" Binding="{CompiledBinding Sent}" SortMemberPath="Sent" MinWidth="60" />
+          <DataGridTextColumn Header="Received" HeaderTemplate="{StaticResource ColumnHeader}" Binding="{CompiledBinding Received}" SortMemberPath="Received" MinWidth="80" />
+          <DataGridTemplateColumn Header="Best (ms)" HeaderTemplate="{StaticResource ColumnHeader}" SortMemberPath="BestMs" MinWidth="90">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate x:DataType="vm:HopRowViewModel">
+                <Grid>
+                  <Border Classes="latency-tint"
+                          IsVisible="{CompiledBinding Severity.BestIsOutlier}" />
+                  <StackPanel Orientation="Horizontal" Spacing="4" Margin="12,0" VerticalAlignment="Center">
+                    <TextBlock Text="{CompiledBinding BestMs, StringFormat='{}{0:F0}', TargetNullValue='--'}" />
+                    <TextBlock Classes="outlier-glyph"
+                               Text="▲"
+                               IsVisible="{CompiledBinding Severity.BestIsOutlier}"
+                               AutomationProperties.Name="Latency outlier"
+                               ToolTip.Tip="Higher than this hop's average (spike)." />
+                  </StackPanel>
+                </Grid>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+          <DataGridTemplateColumn Header="Average (ms)" HeaderTemplate="{StaticResource ColumnHeader}" SortMemberPath="AverageMs" MinWidth="100">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate x:DataType="vm:HopRowViewModel">
+                <Grid>
+                  <Border Classes="latency-tint"
+                          IsVisible="{CompiledBinding Severity.AverageIsOutlier}" />
+                  <StackPanel Orientation="Horizontal" Spacing="4" Margin="12,0" VerticalAlignment="Center">
+                    <TextBlock Text="{CompiledBinding AverageMs, StringFormat='{}{0:F0}', TargetNullValue='--'}" />
+                    <TextBlock Classes="outlier-glyph"
+                               Text="▲"
+                               IsVisible="{CompiledBinding Severity.AverageIsOutlier}"
+                               AutomationProperties.Name="Latency outlier"
+                               ToolTip.Tip="Higher than this hop's average (spike)." />
+                  </StackPanel>
+                </Grid>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+          <DataGridTemplateColumn Header="Worst (ms)" HeaderTemplate="{StaticResource ColumnHeader}" SortMemberPath="WorstMs" MinWidth="90">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate x:DataType="vm:HopRowViewModel">
+                <Grid>
+                  <Border Classes="latency-tint"
+                          IsVisible="{CompiledBinding Severity.WorstIsOutlier}" />
+                  <StackPanel Orientation="Horizontal" Spacing="4" Margin="12,0" VerticalAlignment="Center">
+                    <TextBlock Text="{CompiledBinding WorstMs, StringFormat='{}{0:F0}', TargetNullValue='--'}" />
+                    <TextBlock Classes="outlier-glyph"
+                               Text="▲"
+                               IsVisible="{CompiledBinding Severity.WorstIsOutlier}"
+                               AutomationProperties.Name="Latency outlier"
+                               ToolTip.Tip="Higher than this hop's average (spike)." />
+                  </StackPanel>
+                </Grid>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+          <DataGridTemplateColumn Header="Last (ms)" HeaderTemplate="{StaticResource ColumnHeader}" SortMemberPath="LastMs" MinWidth="80">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate x:DataType="vm:HopRowViewModel">
+                <Grid>
+                  <Border Classes="latency-tint"
+                          IsVisible="{CompiledBinding Severity.LastIsOutlier}" />
+                  <StackPanel Orientation="Horizontal" Spacing="4" Margin="12,0" VerticalAlignment="Center">
+                    <TextBlock Text="{CompiledBinding LastMs, StringFormat='{}{0:F0}', TargetNullValue='--'}" />
+                    <TextBlock Classes="outlier-glyph"
+                               Text="▲"
+                               IsVisible="{CompiledBinding Severity.LastIsOutlier}"
+                               AutomationProperties.Name="Latency outlier"
+                               ToolTip.Tip="Higher than this hop's average (spike)." />
+                  </StackPanel>
+                </Grid>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+          <DataGridTextColumn Header="Status" HeaderTemplate="{StaticResource ColumnHeader}" Binding="{CompiledBinding DisplayStatus}" SortMemberPath="DisplayStatus" MinWidth="60" />
+        </DataGrid.Columns>
+      </DataGrid>
+      <TextBlock Name="EmptyStateText"
+                 Text="{CompiledBinding EmptyStateText}"
+                 IsVisible="{CompiledBinding !HasRows}"
+                 IsHitTestVisible="False"
+                 HorizontalAlignment="Center"
+                 VerticalAlignment="Center"
+                 Foreground="{DynamicResource WinMtrSubtleTextBrush}" />
+    </Grid>
+
+    <!-- Selected-hop detail pane; follows selection. The compact header keeps
+    the collapse toggle reachable while the pane content is hidden, and
+    the Auto-height row gives the freed height to the route grid. -->
+    <Border Grid.Row="4"
+            Name="DetailSurface"
+            Margin="8,0,8,4"
+            Padding="{DynamicResource WinMtrDetailPadding}"
+            BorderThickness="1"
+            CornerRadius="{DynamicResource WinMtrSurfaceCornerRadius}"
+            Background="{DynamicResource WinMtrDetailBackgroundBrush}"
+            BorderBrush="{DynamicResource WinMtrDetailBorderBrush}">
+      <DockPanel>
+        <!-- Header line: it stays visible in both states, so the pane can
+        always be restored. The toggle drives the view-only flag. -->
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,8">
+          <TextBlock Grid.Column="0" Name="DetailHeading"
+                     Classes="detail-caption"
+                     IsVisible="{DynamicResource WinMtrDetailWordsVisible}"
+                     Text="Details"
+                     VerticalAlignment="Center" />
+          <ToggleButton Grid.Column="{DynamicResource WinMtrDetailToggleColumn}"
+                        Name="DetailToggle"
+                        Classes="detail-toggle"
+                        VerticalAlignment="Center"
+                        IsChecked="{CompiledBinding IsDetailExpanded, Mode=TwoWay}"
+                        ToolTip.Tip="Show or hide the hop details."
+                        AutomationProperties.Name="Show or hide the hop details">
+            <Panel>
+              <StackPanel Name="DetailDisclosure" Orientation="Horizontal" Spacing="6"
+                          IsVisible="{DynamicResource WinMtrDetailDisclosureVisible}">
+                <!-- The macOS pack draws the chevron with a 12-unit geometry.
+                A smaller icon box clips it, so keep the box at 12. -->
+                <PathIcon Name="DetailChevron" Width="12" Height="12"
+                          VerticalAlignment="Center" />
+                <TextBlock Text="Details" VerticalAlignment="Center" />
+              </StackPanel>
+              <Panel IsVisible="{DynamicResource WinMtrDetailWordsVisible}">
+                <TextBlock Text="Hide"
+                           Foreground="{DynamicResource WinMtrSubtleTextBrush}"
+                           IsVisible="{CompiledBinding IsDetailExpanded}" />
+                <TextBlock Text="Show"
+                           Foreground="{DynamicResource WinMtrSubtleTextBrush}"
+                           IsVisible="{CompiledBinding !IsDetailExpanded}" />
+              </Panel>
+            </Panel>
+          </ToggleButton>
+        </Grid>
+
+        <!-- Pane content: both elements keep their own empty/detail binding
+        and add the pane flag, so hiding the pane hides only the
+        content, never the header line above. -->
+        <Panel>
+          <!-- Empty state: the same prompt the flat text carried. -->
+          <TextBlock Name="DetailPane"
+                     Text="{CompiledBinding DetailText}"
+                     TextWrapping="Wrap"
+                     VerticalAlignment="Center"
+                     Foreground="{DynamicResource WinMtrSubtleTextBrush}">
+            <TextBlock.IsVisible>
+              <MultiBinding Converter="{x:Static BoolConverters.And}">
+                <Binding Path="!HasDetail" />
+                <Binding Path="IsDetailExpanded" />
+              </MultiBinding>
+            </TextBlock.IsVisible>
+          </TextBlock>
+
+          <StackPanel Spacing="10"
+                      AutomationProperties.Name="Selected hop details">
+            <StackPanel.IsVisible>
+              <MultiBinding Converter="{x:Static BoolConverters.And}">
+                <Binding Path="HasDetail" />
+                <Binding Path="IsDetailExpanded" />
+              </MultiBinding>
+            </StackPanel.IsVisible>
+            <!-- Identity line: hop badge, host, address, and the probe state. -->
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+              <Border Grid.Column="0"
+                      Background="{DynamicResource SystemAccentColorLight2}"
+                      CornerRadius="4"
+                      Padding="10,4"
+                      VerticalAlignment="Center">
+                <TextBlock Text="{CompiledBinding DetailHopText}"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource SystemAccentColorDark3}" />
+              </Border>
+
+              <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                <TextBlock Text="{CompiledBinding DetailHost}"
+                           FontSize="16"
+                           FontWeight="SemiBold"
+                           TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{CompiledBinding DetailAddress}"
+                           FontFamily="{DynamicResource WinMtrAddressFontFamily}"
+                           FontSize="12"
+                           Foreground="{DynamicResource WinMtrSubtleTextBrush}" />
+              </StackPanel>
+
+            </Grid>
+
+            <!-- Measurement tiles: loss first, then the latency spread. Wraps on narrow windows. -->
+            <WrapPanel Orientation="Horizontal">
+              <Border Classes="detail-tile">
+                <StackPanel>
+                  <TextBlock Classes="detail-caption" Text="Status" />
+                  <TextBlock Classes="detail-value"
+                             Text="{CompiledBinding DetailStatus}"
+                             TextWrapping="Wrap"
+                             MaxWidth="220" />
+                </StackPanel>
+              </Border>
+              <Border Classes="detail-tile">
+                <StackPanel>
+                  <TextBlock Classes="detail-caption" Text="Loss" />
+                  <TextBlock Classes="detail-value" Text="{CompiledBinding DetailLossText}" />
+                  <TextBlock Classes="detail-caption" Text="{CompiledBinding DetailLossCounts}" />
+                </StackPanel>
+              </Border>
+              <Border Classes="detail-tile">
+                <StackPanel>
+                  <TextBlock Classes="detail-caption" Text="Best" />
+                  <TextBlock Classes="detail-value" Text="{CompiledBinding DetailBestText}" />
+                </StackPanel>
+              </Border>
+              <Border Classes="detail-tile">
+                <StackPanel>
+                  <TextBlock Classes="detail-caption" Text="Average" />
+                  <TextBlock Classes="detail-value" Text="{CompiledBinding DetailAverageText}" />
+                </StackPanel>
+              </Border>
+              <Border Classes="detail-tile">
+                <StackPanel>
+                  <TextBlock Classes="detail-caption" Text="Worst" />
+                  <TextBlock Classes="detail-value" Text="{CompiledBinding DetailWorstText}" />
+                </StackPanel>
+              </Border>
+              <Border Classes="detail-tile">
+                <StackPanel>
+                  <TextBlock Classes="detail-caption" Text="Last" />
+                  <TextBlock Classes="detail-value" Text="{CompiledBinding DetailLastText}" />
+                </StackPanel>
+              </Border>
+            </WrapPanel>
+
+            <TextBlock Text="{CompiledBinding DetailNotice}"
+                       IsVisible="{CompiledBinding HasDetailNotice}"
+                       TextWrapping="Wrap"
+                       FontSize="12"
+                       Foreground="{DynamicResource WinMtrBannerWarningBorderBrush}" />
+          </StackPanel>
+        </Panel>
+      </DockPanel>
+    </Border>
+
+    <!-- Status bar: session state, target, elapsed, destination, diagnostics on
+    the left; release credit docked right so long status text clips
+    before it can push the credit out. -->
+    <Border Grid.Row="5"
+            Grid.Column="0"
+            Name="StatusBar"
+            Padding="{DynamicResource WinMtrStatusPadding}"
+            Background="{DynamicResource WinMtrStatusBackgroundBrush}">
+      <DockPanel LastChildFill="True">
+        <StackPanel Name="FooterCredit"
+                    DockPanel.Dock="Right"
+                    Orientation="Horizontal"
+                    Spacing="4"
+                    VerticalAlignment="Center">
+          <TextBlock Name="FooterVersionText"
+                     Text="{CompiledBinding FooterVersionText}"
+                     VerticalAlignment="Center"
+                     Foreground="{DynamicResource WinMtrSubtleTextBrush}"
+                     TextTrimming="CharacterEllipsis" />
+          <TextBlock Text="|"
+                     VerticalAlignment="Center"
+                     Foreground="{DynamicResource WinMtrSubtleTextBrush}" />
+          <TextBlock Text="by"
+                     VerticalAlignment="Center"
+                     Foreground="{DynamicResource WinMtrSubtleTextBrush}" />
+          <Button Name="FooterAuthorLink"
+                  Classes="footer-link"
+                  VerticalAlignment="Center"
+                  ToolTip.Tip="{CompiledBinding FooterRepositoryUrl}"
+                  Click="OnFooterLinkClicked">
+            <TextBlock Text="{CompiledBinding FooterAuthorText}"
+                       TextDecorations="Underline"
+                       TextTrimming="CharacterEllipsis" />
+          </Button>
+        </StackPanel>
+        <WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
+          <TextBlock Name="SessionStateText" Text="{CompiledBinding SessionState}" Margin="0,0,16,0" />
+          <TextBlock Name="StatusTargetText" Text="{CompiledBinding AcceptedTargetText}" Margin="0,0,16,0" TextTrimming="CharacterEllipsis" />
+          <TextBlock Name="ElapsedText" Text="{CompiledBinding ElapsedText, StringFormat='Elapsed {0}'}" Margin="0,0,16,0" />
+          <TextBlock Name="DestinationText" Text="{CompiledBinding DestinationText}" Margin="0,0,16,0" TextTrimming="CharacterEllipsis" />
+          <TextBlock Name="DiagnosticText" Text="{CompiledBinding DiagnosticText}" TextTrimming="CharacterEllipsis" />
+        </WrapPanel>
+      </DockPanel>
+    </Border>
+  </Grid>
+</Window>

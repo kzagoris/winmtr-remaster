@@ -1,0 +1,32 @@
+<Project>
+  <!--
+    This Version is the source of truth for a release. The release workflow
+    takes a version as an input and refuses to run when the two differ, so a
+    published Release can never carry a number the binaries were not stamped
+    with. Raise it in a commit on main before you start a release.
+
+    Three numeric parts are required: scripts/assemble-macos-app.sh needs them
+    for the Apple bundle version fields.
+  -->
+  <PropertyGroup>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
+  <!--
+    Tests marked [Trait("Category", "Integration")] talk to the real network:
+    they send ICMP to a public address and wait for real routers to answer, so
+    they fail on connectivity rather than on a defect in this code. Excluding
+    them by default keeps a red result meaningful.
+
+    Conditioned so it can be overridden rather than replaced. To run only the
+    network tests, or to run everything:
+
+      dotnet test WinMtr.Remaster.sln -p:VSTestTestCaseFilter="Category=Integration"
+      dotnet test WinMtr.Remaster.sln -p:VSTestTestCaseFilter=
+
+    A filter passed on the command line also wins over this property.
+  -->
+  <PropertyGroup Condition="'$(VSTestTestCaseFilter)' == ''">
+    <VSTestTestCaseFilter>Category!=Integration</VSTestTestCaseFilter>
+  </PropertyGroup>
+</Project>

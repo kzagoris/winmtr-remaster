@@ -1,0 +1,171 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:WinMtr.Desktop.ViewModels"
+        x:Class="WinMtr.Desktop.Views.SettingsWindow"
+        x:DataType="vm:SettingsViewModel"
+        Title="Trace settings"
+        Width="440"
+        MinWidth="440"
+        MinHeight="360"
+        SizeToContent="Height"
+        CanResize="True"
+        WindowStartupLocation="CenterOwner">
+  <!-- The height follows the content, so the form opens with no scrollbar
+       when the display is big enough. The starting width keeps the wrapped
+       help lines stable, and MinWidth holds that width as the floor. The
+       user can resize the dialog if the content needs more space. On a short
+       display the ScrollViewer scrolls inside and the button bar stays
+       docked. -->
+  <DockPanel LastChildFill="True">
+    <Grid Name="ButtonBar"
+          DockPanel.Dock="Bottom"
+          Margin="{DynamicResource WinMtrSettingsButtonBarMargin}"
+          ColumnDefinitions="Auto,*,Auto">
+      <Button Name="RestoreDefaultsButton"
+              Content="Restore defaults"
+              ToolTip.Tip="Reset every field to its default value."
+              AutomationProperties.Name="Restore defaults"
+              AutomationProperties.HelpText="Reset every field to its default value. The change applies only when you press OK."
+              Command="{CompiledBinding RestoreDefaultsCommand}"
+              HorizontalAlignment="Left" />
+      <StackPanel Name="ConfirmButtons"
+                  Grid.Column="2"
+                  Orientation="Horizontal"
+                  HorizontalAlignment="Right"
+                  Spacing="8">
+        <Button Name="OkButton"
+                Content="OK"
+                MinWidth="80"
+                IsDefault="True"
+                IsEnabled="{CompiledBinding IsValid}"
+                Click="OnOkClicked" />
+        <Button Name="CancelButton"
+                Content="Cancel"
+                MinWidth="80"
+                IsCancel="True"
+                Click="OnCancelClicked" />
+      </StackPanel>
+    </Grid>
+    <ScrollViewer>
+      <StackPanel Margin="{DynamicResource WinMtrSettingsMargin}" Spacing="{DynamicResource WinMtrSettingsSpacing}">
+      <!-- Each field states its range as the control's own bounds, so the
+           control clamps a typed overflow to that bound on commit
+           (ClipValueToMinMax) and the matching view model rule only has
+           to catch a value set in code. Empty clears to null, which the
+           view model reports as "Enter a number ...". Text that parses
+           to no number keeps the old value in the control, so the
+           code-behind reports it through MarkUnparsable instead of
+           letting OK silently revert it. A failed rule is shown by
+           Avalonia itself, beside the field, because the view model reports
+           through INotifyDataErrorInfo. Do not add a message TextBlock under
+           a field: the text would then appear twice. -->
+      <TextBlock Text="Probe interval (seconds):" />
+      <NumericUpDown Name="ProbeIntervalBox"
+                     Value="{CompiledBinding ProbeIntervalSeconds, Mode=TwoWay}"
+                     Minimum="0.1"
+                     Maximum="3600"
+                     Increment="0.1"
+                     ClipValueToMinMax="True"
+                     FormatString="0.###" />
+      <TextBlock Text="Trade responsiveness against load on the path. Allowed range 0.1-3600 seconds; a shorter interval already stored still runs."
+                 TextWrapping="Wrap"
+                 Foreground="{DynamicResource WinMtrSubtleTextBrush}" />
+      <TextBlock Text="Payload size (bytes):" />
+      <NumericUpDown Name="PayloadSizeBox"
+                     Value="{CompiledBinding PayloadSizeBytes, Mode=TwoWay}"
+                     IsEnabled="{CompiledBinding IsPayloadEnabled}"
+                     Minimum="0"
+                     Maximum="65500"
+                     Increment="8"
+                     ClipValueToMinMax="True"
+                     FormatString="0" />
+      <TextBlock Text="Allowed range 0-65500."
+                 TextWrapping="Wrap"
+                 Foreground="{DynamicResource WinMtrSubtleTextBrush}" />
+      <TextBlock Name="PayloadDisabledReasonText"
+                 Text="{CompiledBinding PayloadDisabledReason}"
+                 IsVisible="{CompiledBinding HasPayloadDisabledReason}"
+                 TextWrapping="Wrap"
+                 Foreground="{DynamicResource WinMtrSubtleTextBrush}" />
+      <TextBlock Text="Hop limit:" />
+      <NumericUpDown Name="HopLimitBox"
+                     Value="{CompiledBinding HopLimit, Mode=TwoWay}"
+                     Minimum="1"
+                     Maximum="255"
+                     Increment="1"
+                     ClipValueToMinMax="True"
+                     FormatString="0" />
+      <TextBlock Text="Bounds discovery even when the destination stays silent. Allowed range 1-255."
+                 TextWrapping="Wrap"
+                 Foreground="{DynamicResource WinMtrSubtleTextBrush}" />
+      <TextBlock Text="Reply timeout (seconds):" />
+      <NumericUpDown Name="ReplyTimeoutBox"
+                     Value="{CompiledBinding ReplyTimeoutSeconds, Mode=TwoWay}"
+                     Minimum="0.1"
+                     Maximum="60"
+                     Increment="0.1"
+                     ClipValueToMinMax="True"
+                     FormatString="0.###" />
+      <TextBlock Text="How long one probe waits for a reply before it counts as lost. Allowed range 0.1-60 seconds."
+                 TextWrapping="Wrap"
+                 Foreground="{DynamicResource WinMtrSubtleTextBrush}" />
+      <CheckBox Name="ResolveNamesBox"
+                Content="Resolve host names"
+                IsChecked="{CompiledBinding ResolveHostNames, Mode=TwoWay}" />
+      <TextBlock Text="Off shows addresses only; a slow or broken resolver then cannot obscure the path."
+                 TextWrapping="Wrap"
+                 Foreground="{DynamicResource WinMtrSubtleTextBrush}" />
+      <TextBlock Text="History size:" />
+      <NumericUpDown Name="HistorySizeBox"
+                     Value="{CompiledBinding HistorySize, Mode=TwoWay}"
+                     Minimum="1"
+                     Maximum="100"
+                     Increment="1"
+                     ClipValueToMinMax="True"
+                     FormatString="0" />
+      <TextBlock Text="How many traced targets the input keeps, newest first. Allowed range 1-100; a smaller number drops the oldest at once."
+                 TextWrapping="Wrap"
+                 Foreground="{DynamicResource WinMtrSubtleTextBrush}" />
+      <Button Name="ClearHistoryButton"
+              Content="Clear history"
+              ToolTip.Tip="Remove every entry from the target history."
+              AutomationProperties.Name="Clear history"
+              AutomationProperties.HelpText="Remove every entry from the target history. You can undo before you close this dialog."
+              Command="{CompiledBinding ClearHistoryCommand}"
+              IsVisible="{CompiledBinding !IsHistoryCleared}"
+              HorizontalAlignment="Left" />
+      <StackPanel Name="HistoryClearedPanel"
+                  IsVisible="{CompiledBinding IsHistoryCleared}"
+                  Spacing="4">
+        <TextBlock Name="HistoryClearPendingText"
+                   Text="{CompiledBinding HistoryClearPendingText}"
+                   TextWrapping="Wrap"
+                   Foreground="{DynamicResource WinMtrSubtleTextBrush}" />
+        <Button Name="UndoClearHistoryButton"
+                Content="Undo"
+                ToolTip.Tip="Restore the cleared target history."
+                AutomationProperties.Name="Undo clear history"
+                Command="{CompiledBinding UndoClearHistoryCommand}"
+                HorizontalAlignment="Left" />
+      </StackPanel>
+      <TextBlock Text="Theme:" />
+      <ComboBox Name="ThemeBox"
+                ItemsSource="{CompiledBinding ThemeOptions}"
+                SelectedIndex="{CompiledBinding ThemeIndex, Mode=TwoWay}">
+        <ComboBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:ThemeOption">
+            <TextBlock Text="{CompiledBinding DisplayName}" />
+          </DataTemplate>
+        </ComboBox.ItemTemplate>
+      </ComboBox>
+      <TextBlock Text="System follows your OS light/dark preference; Light and Dark pin the app. Applies on OK."
+                 TextWrapping="Wrap"
+                 Foreground="{DynamicResource WinMtrSubtleTextBrush}" />
+      <TextBlock Name="SettingsErrorText"
+                 Text="{CompiledBinding ErrorText}"
+                 TextWrapping="Wrap"
+                 Foreground="{DynamicResource WinMtrErrorTextBrush}" />
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</Window>

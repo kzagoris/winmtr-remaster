@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <AssemblyName>winmtr</AssemblyName>
+    <RootNamespace>WinMtr.Desktop</RootNamespace>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <IsAotCompatible>true</IsAotCompatible>
+    <ApplicationIcon>Assets\winmtr-route-pulse.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <!-- NativeAOT publishing via `-p:PublishAot=true` on the command line
+       (a global property, so this condition sees it; the win-x64-aot
+       publish profile repeats the demotion inside the profile itself
+       because profiles are imported after this file is evaluated):
+       Avalonia.Controls.DataGrid 12.1.2 still reports IL2104/IL3053
+       against itself (third-party code we cannot annotate), so the
+       demotion stays and the win-x64 publish remains the smoke check.
+       See docs/adr/0008-avalonia-12.md. Revisit on the next Avalonia
+       upgrade. -->
+  <PropertyGroup Condition="'$(PublishAot)' == 'true'">
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);IL2104;IL3053</WarningsNotAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\winmtr-route-pulse-light.ico" />
+    <AvaloniaResource Include="Assets\winmtr-route-pulse-dark.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.1.2" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.2" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.2" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.2" />
+    <PackageReference Include="Avalonia.Controls.DataGrid" Version="12.1.2" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\WinMtr.Core\WinMtr.Core.csproj" />
+    <ProjectReference Include="..\WinMtr.Infrastructure\WinMtr.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="WinMtr.Desktop.Tests" />
+  </ItemGroup>
+
+</Project>

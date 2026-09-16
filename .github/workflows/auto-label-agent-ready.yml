@@ -1,0 +1,57 @@
+# Auto-label agent-ready issues.
+#
+# When an Agent-ready task holds all required sections, mark it `agent-ready`
+# so the trigger workflow can route it. When sections are missing, mark it
+# `needs-info`. This workflow makes no code changes and needs no secrets.
+
+name: Auto-label agent-ready
+
+on:
+  issues:
+    types: [opened, edited, reopened]
+
+permissions:
+  issues: write
+
+jobs:
+  label:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check required sections
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const body = (context.payload.issue.body || '').toLowerCase();
+            const required = [
+              'goal',
+              'context pointers',
+              'acceptance criteria',
+              'boundaries',
+              'verification',
+            ];
+            const missing = required.filter(s => !body.includes(s));
+            const labels = context.payload.issue.labels.map(l => l.name);
+            if (missing.length === 0) {
+              if (!labels.includes('agent-ready')) {
+                await github.rest.issues.addLabels({
+                  ...context.repo,
+                  issue_number: context.issue.number,
+                  labels: ['agent-ready'],
+                });
+              }
+              if (labels.includes('needs-info')) {
+                await github.rest.issues.removeLabel({
+                  ...context.repo,
+                  issue_number: context.issue.number,
+                  name: 'needs-info',
+                });
+              }
+            } else {
+              if (!labels.includes('needs-info')) {
+                await github.rest.issues.addLabels({
+                  ...context.repo,
+                  issue_number: context.issue.number,
+                  labels: ['needs-info'],
+                });
+              }
+            }

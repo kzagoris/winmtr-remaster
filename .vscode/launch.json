@@ -1,0 +1,23 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Avalonia: WinMtr.Desktop",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/src/WinMtr.Desktop/bin/Debug/net10.0/winmtr.dll",
+            "cwd": "${workspaceFolder}/src/WinMtr.Desktop"
+        },
+        {
+            "name": "Console: WinMtr.Console",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/src/WinMtr.Console/bin/Debug/net10.0/winmtr-cli.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/WinMtr.Console",
+            "console": "integratedTerminal"
+        }
+    ]
+}
